@@ -191,8 +191,8 @@ export function DashboardWorkspace({
         />
       </section>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
-        <div className="space-y-8">
+      <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
+        <div className="min-w-0 space-y-8">
           <AccountManager
             accounts={visibleAccounts}
             defaultAccountId={dashboard.defaultAccountId}
@@ -205,7 +205,7 @@ export function DashboardWorkspace({
           />
         </div>
 
-        <aside className="space-y-8">
+        <aside className="min-w-0 space-y-8">
           <section className="border-y border-[#dce5de] bg-white px-5 py-6 sm:px-7">
             <div className="flex items-start gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#eaf2ec] text-[#237457]">

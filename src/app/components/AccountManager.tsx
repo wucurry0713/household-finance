@@ -254,37 +254,44 @@ export function AccountManager({
       {accounts.length ? (
         <div className="mt-5 divide-y divide-[#edf1ed]">
           {accounts.map((account) => (
-            <div className="flex items-center gap-3 py-3.5" key={account.id}>
-              <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#eaf2ec] text-[#237457]">
-                <AccountIcon type={account.account_type} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <p className="truncate text-sm font-medium">{account.name}</p>
-                  <span className="text-xs text-[#829088]">{accountTypeLabels[account.account_type]}</span>
-                  {!account.is_shared && <span className="text-xs text-[#829088]">個人</span>}
+            <div
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3.5 sm:flex sm:gap-3"
+              key={account.id}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#eaf2ec] text-[#237457]">
+                  <AccountIcon type={account.account_type} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <p className="truncate text-sm font-medium">{account.name}</p>
+                    <span className="text-xs text-[#829088]">{accountTypeLabels[account.account_type]}</span>
+                    {!account.is_shared && <span className="text-xs text-[#829088]">個人</span>}
+                  </div>
+                  <p className="mt-1 text-xs text-[#829088]">
+                    期初 {formatBalance(account.opening_balance, account.currency)}
+                  </p>
                 </div>
-                <p className="mt-1 text-xs text-[#829088]">
-                  期初 {formatBalance(account.opening_balance, account.currency)}
-                </p>
               </div>
-              <p className="whitespace-nowrap text-sm font-semibold text-[#18392f]">
+              <p className="min-w-0 max-w-32 text-right text-sm font-semibold text-[#18392f] [overflow-wrap:anywhere] sm:max-w-none sm:whitespace-nowrap">
                 {formatBalance(account.balance, account.currency)}
               </p>
-              <SetDefaultAccountForm
-                accountId={account.id}
-                isDefault={defaultAccountId === account.id}
-              />
-              <button
-                aria-label={`編輯 ${account.name}`}
-                className="rounded-md p-2 text-[#7a8981] transition hover:bg-[#edf2ee] hover:text-[#285943]"
-                onClick={() => setEditingAccount(account)}
-                title="編輯帳戶"
-                type="button"
-              >
-                <Pencil size={16} />
-              </button>
-              <DeleteAccountForm accountId={account.id} />
+              <div className="col-span-2 flex items-center justify-end gap-1 sm:ml-auto">
+                <SetDefaultAccountForm
+                  accountId={account.id}
+                  isDefault={defaultAccountId === account.id}
+                />
+                <button
+                  aria-label={`編輯 ${account.name}`}
+                  className="rounded-md p-2 text-[#7a8981] transition hover:bg-[#edf2ee] hover:text-[#285943]"
+                  onClick={() => setEditingAccount(account)}
+                  title="編輯帳戶"
+                  type="button"
+                >
+                  <Pencil size={16} />
+                </button>
+                <DeleteAccountForm accountId={account.id} />
+              </div>
             </div>
           ))}
         </div>

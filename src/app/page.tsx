@@ -45,7 +45,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[#f4f7f3] text-[#14251f]">
-      <header className="border-b border-[#dce5de] bg-white">
+      <header className="border-b border-[#dce5de] bg-white pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
           <Link className="flex items-center gap-2.5" href="/">
             <span className="grid size-9 place-items-center rounded-lg bg-[#18392f] text-[#c9ed78]">
@@ -64,7 +64,7 @@ export default async function Home() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+      <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl sm:px-8 sm:py-14">
         <DashboardWorkspace
           currentUserId={user.id}
           dashboard={dashboard}
