@@ -18,13 +18,22 @@ const investmentAccountTypes: ReadonlySet<string> = new Set([
 const otherAssetAccountTypes: ReadonlySet<string> = new Set([
   "asset",
   "real_estate",
-  "other",
+  "vehicle",
 ]);
 const liabilityAccountTypes: ReadonlySet<string> = new Set([
   "loan",
   "liability",
-  "credit_card",
 ]);
+const otherAssetNamePattern = /房地產|車子|房屋/;
+
+function isOtherAssetAccount(account: DashboardAccount) {
+  return (
+    otherAssetAccountTypes.has(account.account_type) ||
+    (!investmentAccountTypes.has(account.account_type) &&
+      !liabilityAccountTypes.has(account.account_type) &&
+      otherAssetNamePattern.test(account.name))
+  );
+}
 
 export type DashboardAccount = AccountRow & { balance: number };
 
@@ -310,15 +319,21 @@ export async function loadDashboardData(
           account.currency === baseCurrency && accountTypes.has(account.account_type),
       )
       .reduce((sum, account) => sum + account.balance, 0);
-  const accountAssets = sumAccountBalances(balancesByAccount, cashAccountTypes);
+  const accountAssets = balancesByAccount
+    .filter(
+      (account) =>
+        account.currency === baseCurrency &&
+        cashAccountTypes.has(account.account_type) &&
+        !isOtherAssetAccount(account),
+    )
+    .reduce((sum, account) => sum + account.balance, 0);
   const investmentAccountValue = sumAccountBalances(
     balancesByAccount,
     investmentAccountTypes,
   );
-  const otherAssetAccountValue = sumAccountBalances(
-    balancesByAccount,
-    otherAssetAccountTypes,
-  );
+  const otherAssetAccountValue = balancesByAccount
+    .filter((account) => account.currency === baseCurrency && isOtherAssetAccount(account))
+    .reduce((sum, account) => sum + account.balance, 0);
   const liabilityAccountValue = balancesByAccount
     .filter(
       (account) =>
@@ -384,9 +399,20 @@ export async function loadDashboardData(
     const owns = (item: { owner_id: string | null; is_joint: boolean }) =>
       item.is_joint || item.owner_id === member.userId;
     const memberAccounts = balancesByAccount.filter(owns);
-    const memberAccountAssets = sumAccountBalances(memberAccounts, cashAccountTypes);
+    const memberAccountAssets = memberAccounts
+      .filter(
+        (account) =>
+          account.currency === baseCurrency &&
+          cashAccountTypes.has(account.account_type) &&
+          !isOtherAssetAccount(account),
+      )
+      .reduce((sum, account) => sum + account.balance, 0);
     const memberOtherAssets =
-      sumAccountBalances(memberAccounts, otherAssetAccountTypes) +
+      memberAccounts
+        .filter(
+          (account) => account.currency === baseCurrency && isOtherAssetAccount(account),
+        )
+        .reduce((sum, account) => sum + account.balance, 0) +
       assets
         .filter((asset) => owns(asset) && asset.currency === baseCurrency)
         .reduce(

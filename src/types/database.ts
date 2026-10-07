@@ -103,7 +103,19 @@ export type Database = {
           owner_user_id: string | null;
           owner_id: string | null;
           name: string;
-          account_type: "cash" | "bank" | "credit_card" | "investment" | "loan";
+          account_type:
+            | "cash"
+            | "bank"
+            | "credit_card"
+            | "investment"
+            | "loan"
+            | "stock"
+            | "securities"
+            | "asset"
+            | "real_estate"
+            | "vehicle"
+            | "liability"
+            | "other";
           currency: string;
           opening_balance: number;
           is_shared: boolean;
@@ -118,7 +130,19 @@ export type Database = {
           owner_user_id?: string | null;
           owner_id?: string | null;
           name: string;
-          account_type: "cash" | "bank" | "credit_card" | "investment" | "loan";
+          account_type:
+            | "cash"
+            | "bank"
+            | "credit_card"
+            | "investment"
+            | "loan"
+            | "stock"
+            | "securities"
+            | "asset"
+            | "real_estate"
+            | "vehicle"
+            | "liability"
+            | "other";
           currency?: string;
           opening_balance?: number;
           is_shared?: boolean;

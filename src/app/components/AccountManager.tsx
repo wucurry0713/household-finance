@@ -10,16 +10,24 @@ import {
   updateAccountAction,
   type AccountActionState,
 } from "@/app/actions/accounts";
+import { accountTypes, type AccountType } from "@/lib/finance/account-types";
 import type { DashboardAccount } from "@/lib/finance/dashboard";
 
 const initialState: AccountActionState = { error: null, success: false };
 
-const accountTypeLabels = {
+const accountTypeLabels: Record<AccountType, string> = {
   cash: "現金",
   bank: "銀行存款",
-  credit_card: "信用卡",
-  investment: "投資帳戶",
-  loan: "貸款帳戶",
+  credit_card: "信用卡（舊類型）",
+  investment: "投資部位",
+  loan: "貸款",
+  stock: "股票",
+  securities: "證券",
+  asset: "其他資產",
+  real_estate: "房地產",
+  vehicle: "車輛",
+  liability: "負債",
+  other: "其他（舊類型）",
 };
 
 function AccountIcon({ type }: { type: DashboardAccount["account_type"] }) {
@@ -104,9 +112,9 @@ function AccountForm({
                 name="account_type"
                 required
               >
-                {Object.entries(accountTypeLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
+                {accountTypes.map((accountType) => (
+                  <option key={accountType} value={accountType}>
+                    {accountTypeLabels[accountType]}
                   </option>
                 ))}
               </select>

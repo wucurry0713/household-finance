@@ -3,27 +3,17 @@
 import { revalidatePath } from "next/cache";
 
 import { getFinanceContext } from "@/lib/finance/context";
+import { isAccountType, type AccountType } from "@/lib/finance/account-types";
 
 export type AccountActionState = {
   error: string | null;
   success: boolean;
 };
 
-type AccountType = "cash" | "bank" | "credit_card" | "investment" | "loan";
-
 const failed = (error: string): AccountActionState => ({ error, success: false });
 
 function getAccountType(value: FormDataEntryValue | null): AccountType | null {
-  if (
-    value === "cash" ||
-    value === "bank" ||
-    value === "credit_card" ||
-    value === "investment" ||
-    value === "loan"
-  ) {
-    return value;
-  }
-  return null;
+  return isAccountType(value) ? value : null;
 }
 
 function getAccountFields(formData: FormData) {
