@@ -9,6 +9,23 @@ type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
 type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
 type EntryRow = Database["public"]["Tables"]["transaction_entries"]["Row"];
 
+const cashAccountTypes: ReadonlySet<string> = new Set(["bank", "cash"]);
+const investmentAccountTypes: ReadonlySet<string> = new Set([
+  "investment",
+  "stock",
+  "securities",
+]);
+const otherAssetAccountTypes: ReadonlySet<string> = new Set([
+  "asset",
+  "real_estate",
+  "other",
+]);
+const liabilityAccountTypes: ReadonlySet<string> = new Set([
+  "loan",
+  "liability",
+  "credit_card",
+]);
+
 export type DashboardAccount = AccountRow & { balance: number };
 
 export type DashboardMember = {
@@ -283,9 +300,31 @@ export async function loadDashboardData(
     ...account,
     balance: accountBalances.get(account.id) ?? Number(account.opening_balance) ?? 0,
   }));
-  const accountAssets = balancesByAccount
-    .filter((account) => account.currency === baseCurrency)
-    .reduce((sum, account) => sum + account.balance, 0);
+  const sumAccountBalances = (
+    accountRows: typeof balancesByAccount,
+    accountTypes: ReadonlySet<string>,
+  ) =>
+    accountRows
+      .filter(
+        (account) =>
+          account.currency === baseCurrency && accountTypes.has(account.account_type),
+      )
+      .reduce((sum, account) => sum + account.balance, 0);
+  const accountAssets = sumAccountBalances(balancesByAccount, cashAccountTypes);
+  const investmentAccountValue = sumAccountBalances(
+    balancesByAccount,
+    investmentAccountTypes,
+  );
+  const otherAssetAccountValue = sumAccountBalances(
+    balancesByAccount,
+    otherAssetAccountTypes,
+  );
+  const liabilityAccountValue = balancesByAccount
+    .filter(
+      (account) =>
+        account.currency === baseCurrency && liabilityAccountTypes.has(account.account_type),
+    )
+    .reduce((sum, account) => sum + Math.abs(account.balance), 0);
 
   const latestValuation = new Map<string, number>();
   for (const valuation of valuations) {
@@ -293,23 +332,31 @@ export async function loadDashboardData(
       latestValuation.set(valuation.asset_id, Number(valuation.value));
     }
   }
-  const otherAssets = assets
-    .filter((asset) => asset.currency === baseCurrency)
-    .reduce(
-      (sum, asset) =>
-        sum + (latestValuation.get(asset.id) ?? Number(asset.purchase_price) ?? 0),
-      0,
-    );
-  const investmentValue = holdings
-    .filter((holding) => holding.currency === baseCurrency)
-    .reduce(
-      (sum, holding) =>
-        sum + Number(holding.quantity) * Number(holding.current_price ?? holding.average_cost ?? 0),
-      0,
-    );
-  const liabilityValue = liabilities
-    .filter((liability) => liability.currency === baseCurrency)
-    .reduce((sum, liability) => sum + Number(liability.current_balance), 0);
+  const otherAssets =
+    otherAssetAccountValue +
+    assets
+      .filter((asset) => asset.currency === baseCurrency)
+      .reduce(
+        (sum, asset) =>
+          sum + (latestValuation.get(asset.id) ?? Number(asset.purchase_price) ?? 0),
+        0,
+      );
+  const investmentValue =
+    investmentAccountValue +
+    holdings
+      .filter((holding) => holding.currency === baseCurrency)
+      .reduce(
+        (sum, holding) =>
+          sum +
+          Number(holding.quantity) *
+            Number(holding.current_price ?? holding.average_cost ?? 0),
+        0,
+      );
+  const liabilityValue =
+    liabilityAccountValue +
+    liabilities
+      .filter((liability) => liability.currency === baseCurrency)
+      .reduce((sum, liability) => sum + Math.abs(Number(liability.current_balance)), 0);
 
   const monthTransactionViews: DashboardMonthTransaction[] = monthTransactions.map((transaction) => {
     const amount = Math.abs(monthAmounts.get(transaction.id) ?? 0);
@@ -337,26 +384,38 @@ export async function loadDashboardData(
     const owns = (item: { owner_id: string | null; is_joint: boolean }) =>
       item.is_joint || item.owner_id === member.userId;
     const memberAccounts = balancesByAccount.filter(owns);
-    const memberAccountAssets = memberAccounts
-      .filter((account) => account.currency === baseCurrency)
-      .reduce((sum, account) => sum + account.balance, 0);
-    const memberOtherAssets = assets
-      .filter((asset) => owns(asset) && asset.currency === baseCurrency)
-      .reduce(
-        (sum, asset) =>
-          sum + (latestValuation.get(asset.id) ?? Number(asset.purchase_price) ?? 0),
-        0,
-      );
-    const memberInvestments = holdings
-      .filter((holding) => owns(holding) && holding.currency === baseCurrency)
-      .reduce(
-        (sum, holding) =>
-          sum + Number(holding.quantity) * Number(holding.current_price ?? holding.average_cost ?? 0),
-        0,
-      );
-    const memberLiabilities = liabilities
-      .filter((liability) => owns(liability) && liability.currency === baseCurrency)
-      .reduce((sum, liability) => sum + Number(liability.current_balance), 0);
+    const memberAccountAssets = sumAccountBalances(memberAccounts, cashAccountTypes);
+    const memberOtherAssets =
+      sumAccountBalances(memberAccounts, otherAssetAccountTypes) +
+      assets
+        .filter((asset) => owns(asset) && asset.currency === baseCurrency)
+        .reduce(
+          (sum, asset) =>
+            sum + (latestValuation.get(asset.id) ?? Number(asset.purchase_price) ?? 0),
+          0,
+        );
+    const memberInvestments =
+      sumAccountBalances(memberAccounts, investmentAccountTypes) +
+      holdings
+        .filter((holding) => owns(holding) && holding.currency === baseCurrency)
+        .reduce(
+          (sum, holding) =>
+            sum +
+            Number(holding.quantity) *
+              Number(holding.current_price ?? holding.average_cost ?? 0),
+          0,
+        );
+    const memberLiabilityAccountValue = memberAccounts
+      .filter(
+        (account) =>
+          account.currency === baseCurrency && liabilityAccountTypes.has(account.account_type),
+      )
+      .reduce((sum, account) => sum + Math.abs(account.balance), 0);
+    const memberLiabilities =
+      memberLiabilityAccountValue +
+      liabilities
+        .filter((liability) => owns(liability) && liability.currency === baseCurrency)
+        .reduce((sum, liability) => sum + Math.abs(Number(liability.current_balance)), 0);
     const memberMonthTransactions = monthTransactionViews.filter(owns);
     const memberMonthIncome = memberMonthTransactions
       .filter((transaction) => transaction.kind === "income")
