@@ -219,6 +219,8 @@ export function DashboardWorkspace({
             transactions={visibleTransactions}
             viewOwnerId={selectedOwnerId}
             monthLabel={monthLabel(selectedMonth)}
+            monthlyExpenseTotal={totals.monthExpenses}
+            currency={baseCurrency}
           />
         </div>
 

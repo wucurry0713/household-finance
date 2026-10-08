@@ -5,6 +5,7 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   ArrowUpRight,
+  ChevronDown,
   Download,
   Pencil,
   Trash2,
@@ -70,13 +71,18 @@ export function RecentTransactions({
   transactions,
   viewOwnerId,
   monthLabel,
+  monthlyExpenseTotal,
+  currency,
 }: {
   accounts: DashboardAccount[];
   categories: Category[];
   transactions: DashboardTransaction[];
   viewOwnerId?: string | null;
   monthLabel: string;
+  monthlyExpenseTotal: number;
+  currency: string;
 }) {
+  const [isExpenseExpanded, setIsExpenseExpanded] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<DashboardTransaction | null>(null);
   const [exportScope, setExportScope] = useState<ExportScope>("current_month");
   const [exportMonth, setExportMonth] = useState(() => {
@@ -133,114 +139,150 @@ export function RecentTransactions({
 
   return (
     <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="min-w-0">
           <p className="text-xs font-medium text-[#8C827A]">家庭帳本</p>
           <h2 className="mt-1 font-semibold">{monthLabel}交易明細</h2>
+          <p className="mt-2 text-sm text-[#8C827A]">
+            {monthLabel}總支出{" "}
+            <span className="font-mono font-semibold tabular-nums text-[#2C2623]">
+              {formatMoney(monthlyExpenseTotal, currency)}
+            </span>
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label="CSV 匯出範圍"
-            className="h-9 rounded-lg border border-[#EFECE6] bg-white px-2.5 text-xs text-[#8C827A] outline-none focus:border-[#B8976C]"
-            onChange={(event) => setExportScope(event.target.value as ExportScope)}
-            value={exportScope}
-          >
-            <option value="current_month">本月交易</option>
-            <option value="month">指定月份</option>
-            <option value="all">全部交易</option>
-          </select>
-          {exportScope === "month" && (
-            <input
-              aria-label="選擇匯出月份"
-              className="h-9 rounded-lg border border-[#EFECE6] bg-white px-2 text-xs text-[#8C827A] outline-none focus:border-[#B8976C]"
-              onChange={(event) => setExportMonth(event.target.value)}
-              type="month"
-              value={exportMonth}
-            />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {isExpenseExpanded && (
+            <>
+              <select
+                aria-label="CSV 匯出範圍"
+                className="h-9 rounded-lg border border-[#EFECE6] bg-white px-2.5 text-xs text-[#8C827A] outline-none focus:border-[#B8976C]"
+                onChange={(event) => setExportScope(event.target.value as ExportScope)}
+                value={exportScope}
+              >
+                <option value="current_month">本月交易</option>
+                <option value="month">指定月份</option>
+                <option value="all">全部交易</option>
+              </select>
+              {exportScope === "month" && (
+                <input
+                  aria-label="選擇匯出月份"
+                  className="h-9 rounded-lg border border-[#EFECE6] bg-white px-2 text-xs text-[#8C827A] outline-none focus:border-[#B8976C]"
+                  onChange={(event) => setExportMonth(event.target.value)}
+                  type="month"
+                  value={exportMonth}
+                />
+              )}
+              <button
+                className="flex h-9 items-center gap-1.5 rounded-lg border border-[#EFECE6] px-3 text-xs font-semibold text-[#6B573F] transition hover:bg-[#E8DEC9] disabled:cursor-wait disabled:opacity-60"
+                disabled={isExporting}
+                onClick={downloadCsv}
+                type="button"
+              >
+                <Download size={15} />
+                {isExporting ? "準備中…" : "匯出 CSV"}
+              </button>
+              <ExcelExportButton />
+            </>
           )}
           <button
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-[#EFECE6] px-3 text-xs font-semibold text-[#6B573F] transition hover:bg-[#E8DEC9] disabled:cursor-wait disabled:opacity-60"
-            disabled={isExporting}
-            onClick={downloadCsv}
+            aria-controls="household-expense-details"
+            aria-expanded={isExpenseExpanded}
+            aria-label={isExpenseExpanded ? "收起家庭支出明細" : "展開家庭支出明細"}
+            className="grid size-9 shrink-0 place-items-center rounded-lg border border-[#EFECE6] text-[#6B573F] transition-colors hover:bg-[#E8DEC9]"
+            onClick={() => setIsExpenseExpanded((expanded) => !expanded)}
             type="button"
           >
-            <Download size={15} />
-            {isExporting ? "準備中…" : "匯出 CSV"}
+            <ChevronDown
+              aria-hidden="true"
+              className={`transition-transform duration-300 ${isExpenseExpanded ? "rotate-180" : ""}`}
+              size={18}
+            />
           </button>
-          <ExcelExportButton />
         </div>
       </div>
-      {exportError && (
-        <p aria-live="polite" className="mt-3 text-sm text-[#9f3e2e]" role="alert">
-          {exportError}
-        </p>
-      )}
 
-      {transactions.length ? (
-        <div className="mt-4 divide-y divide-[#E8DEC9]">
-          {transactions.map((transaction) => {
-            const isIncome = transaction.kind === "income";
-            const isTransfer = transaction.kind === "transfer";
-            const Icon = isTransfer ? ArrowLeftRight : isIncome ? ArrowDownLeft : ArrowUpRight;
-            const detail = isTransfer
-              ? `${transaction.accountName ?? "帳戶"} → ${transaction.destinationName ?? "帳戶"}`
-              : [transaction.categoryName, transaction.accountName]
-                  .filter(Boolean)
-                  .join(" · ") || "未分類";
+      <div
+        aria-hidden={!isExpenseExpanded}
+        className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+          isExpenseExpanded ? "mt-4 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"
+        }`}
+        id="household-expense-details"
+        inert={!isExpenseExpanded}
+      >
+        <div className="min-h-0 overflow-hidden">
+          {exportError && (
+            <p aria-live="polite" className="mb-3 text-sm text-[#9f3e2e]" role="alert">
+              {exportError}
+            </p>
+          )}
 
-            return (
-              <article className="flex min-w-0 items-center gap-3 py-3.5" key={transaction.id}>
-                <span
-                  className={`grid size-10 shrink-0 place-items-center rounded-full ${
-                    isIncome
-                      ? "bg-[#E8DEC9] text-[#6B573F]"
-                      : isTransfer
-                        ? "bg-[#E8DEC9] text-[#8C827A]"
-                        : "bg-[#fff1e9] text-[#ab6942]"
-                  }`}
-                >
-                  <Icon size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {transaction.notes || transaction.description || (isTransfer ? "帳戶轉帳" : detail)}
-                  </p>
-                  <p className="mt-1 truncate text-xs text-[#8C827A]">
-                    {new Date(`${transaction.transaction_date}T00:00:00`).toLocaleDateString("zh-TW", {
-                      month: "numeric",
-                      day: "numeric",
-                    })}
-                    {" · "}
-                    {detail}
-                  </p>
-                </div>
-                <p
-                  className={`whitespace-nowrap text-sm font-semibold ${
-                    isIncome ? "text-[#6B573F]" : isTransfer ? "text-[#8C827A]" : "text-[#2C2623]"
-                  }`}
-                >
-                  {isIncome ? "+" : isTransfer ? "" : "−"}
-                  {formatMoney(transaction.amount, transaction.currency)}
-                </p>
-                <button
-                  aria-label="編輯交易"
-                  className="grid size-9 shrink-0 place-items-center rounded-md text-[#8C827A] transition hover:bg-[#E8DEC9] hover:text-[#6B573F]"
-                  onClick={() => setEditingTransaction(transaction)}
-                  title="編輯交易"
-                  type="button"
-                >
-                  <Pencil size={16} />
-                </button>
-                <DeleteTransactionForm transactionId={transaction.id} />
-              </article>
-            );
-          })}
+          {transactions.length ? (
+            <div className="divide-y divide-[#E8DEC9]">
+              {transactions.map((transaction) => {
+                const isIncome = transaction.kind === "income";
+                const isTransfer = transaction.kind === "transfer";
+                const Icon = isTransfer ? ArrowLeftRight : isIncome ? ArrowDownLeft : ArrowUpRight;
+                const detail = isTransfer
+                  ? `${transaction.accountName ?? "帳戶"} → ${transaction.destinationName ?? "帳戶"}`
+                  : [transaction.categoryName, transaction.accountName]
+                      .filter(Boolean)
+                      .join(" · ") || "未分類";
+
+                return (
+                  <article className="flex min-w-0 items-center gap-3 py-3.5" key={transaction.id}>
+                    <span
+                      className={`grid size-10 shrink-0 place-items-center rounded-full ${
+                        isIncome
+                          ? "bg-[#E8DEC9] text-[#6B573F]"
+                          : isTransfer
+                            ? "bg-[#E8DEC9] text-[#8C827A]"
+                            : "bg-[#fff1e9] text-[#ab6942]"
+                      }`}
+                    >
+                      <Icon size={18} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {transaction.notes || transaction.description || (isTransfer ? "帳戶轉帳" : detail)}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-[#8C827A]">
+                        {new Date(`${transaction.transaction_date}T00:00:00`).toLocaleDateString("zh-TW", {
+                          month: "numeric",
+                          day: "numeric",
+                        })}
+                        {" · "}
+                        {detail}
+                      </p>
+                    </div>
+                    <p
+                      className={`whitespace-nowrap text-sm font-semibold ${
+                        isIncome ? "text-[#6B573F]" : isTransfer ? "text-[#8C827A]" : "text-[#2C2623]"
+                      }`}
+                    >
+                      {isIncome ? "+" : isTransfer ? "" : "−"}
+                      {formatMoney(transaction.amount, transaction.currency)}
+                    </p>
+                    <button
+                      aria-label="編輯交易"
+                      className="grid size-9 shrink-0 place-items-center rounded-md text-[#8C827A] transition hover:bg-[#E8DEC9] hover:text-[#6B573F]"
+                      onClick={() => setEditingTransaction(transaction)}
+                      title="編輯交易"
+                      type="button"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <DeleteTransactionForm transactionId={transaction.id} />
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-[#EFECE6] px-5 py-10 text-center text-sm text-[#8C827A]">
+              尚無交易紀錄，使用「記一筆」開始記帳。
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="mt-4 rounded-lg border border-dashed border-[#EFECE6] px-5 py-10 text-center text-sm text-[#8C827A]">
-          尚無交易紀錄，使用「記一筆」開始記帳。
-        </div>
-      )}
+      </div>
 
       {editingTransaction && (
         <QuickTransactionModal
