@@ -30,6 +30,11 @@ const accountTypeLabels: Record<AccountType, string> = {
   other: "其他（舊類型）",
 };
 
+const accountTypeOptions = accountTypes.map((value) => ({
+  value,
+  label: accountTypeLabels[value],
+}));
+
 function AccountIcon({ type }: { type: DashboardAccount["account_type"] }) {
   if (type === "cash") return <Banknote size={18} />;
   if (type === "credit_card") return <CreditCard size={18} />;
@@ -112,9 +117,9 @@ function AccountForm({
                 name="account_type"
                 required
               >
-                {accountTypes.map((accountType) => (
-                  <option key={accountType} value={accountType}>
-                    {accountTypeLabels[accountType]}
+                {accountTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>

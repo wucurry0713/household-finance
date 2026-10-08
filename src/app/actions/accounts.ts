@@ -12,9 +12,12 @@ export type AccountActionState = {
 
 const failed = (error: string): AccountActionState => ({ error, success: false });
 
-function accountWriteErrorMessage(error: { code?: string; message: string }) {
+function accountWriteErrorMessage(
+  error: { code?: string; message: string },
+  accountType: AccountType,
+) {
   if (error.code === "23514" && error.message.includes("accounts_account_type_check")) {
-    return "資料庫尚未允許此帳戶類型，請先套用最新的 Supabase migrations。";
+    return `Supabase 的 accounts_account_type_check 約束拒絕了「${accountType}」類型，請先套用最新的資料庫 migration。`;
   }
   return error.message;
 }
@@ -62,8 +65,8 @@ export async function createAccountAction(
   });
 
   if (error) {
-    console.error("[accounts] Create failed", error);
-    return failed(accountWriteErrorMessage(error));
+    console.error("[accounts] Create failed", { accountType: fields.accountType, ...error });
+    return failed(accountWriteErrorMessage(error, fields.accountType));
   }
 
   revalidatePath("/");
@@ -99,8 +102,12 @@ export async function updateAccountAction(
     .eq("household_id", householdId);
 
   if (error) {
-    console.error("[accounts] Update failed", { accountId, ...error });
-    return failed(accountWriteErrorMessage(error));
+    console.error("[accounts] Update failed", {
+      accountId,
+      accountType: fields.accountType,
+      ...error,
+    });
+    return failed(accountWriteErrorMessage(error, fields.accountType));
   }
 
   revalidatePath("/");
