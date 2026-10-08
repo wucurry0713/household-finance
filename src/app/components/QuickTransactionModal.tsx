@@ -222,8 +222,26 @@ export function QuickTransactionModal({
       (!selectedAccount || account.currency === selectedAccount.currency),
   );
 
+  function resetForm() {
+    setKind("expense");
+    setAmount("");
+    setAccountId("");
+    setDestinationAccountId("");
+    setCategoryId("");
+    setFallbackCategory("");
+    setShowMoreOptions(false);
+    setDate(getToday());
+    setNotes("");
+    setState(initialState);
+    setShowCustomCategory(false);
+    setCustomCategoryName("");
+    setCustomCategoryIcon("wallet");
+    setCustomCategoryError(null);
+  }
+
   function closeModal() {
     if (isPending) return;
+    if (!initialTransaction) resetForm();
     setIsOpen(false);
     onClose?.();
   }
@@ -244,12 +262,7 @@ export function QuickTransactionModal({
 
       if (result.intent === "continue" && !initialTransaction) {
         form.reset();
-        setAmount("");
-        setCategoryId("");
-        setFallbackCategory("");
-        setNotes("");
-        const today = getToday();
-        setDate(today);
+        resetForm();
         return;
       }
 
@@ -258,7 +271,10 @@ export function QuickTransactionModal({
   }
 
   function openModal() {
-    if (!initialTransaction) setIsOpen(true);
+    if (!initialTransaction) {
+      resetForm();
+      setIsOpen(true);
+    }
   }
 
   async function saveCustomCategory(event: React.FormEvent<HTMLFormElement>) {
