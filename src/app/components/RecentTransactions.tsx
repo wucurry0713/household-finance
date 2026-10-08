@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import {
   ArrowDownLeft,
   ArrowLeftRight,
@@ -20,6 +20,7 @@ import type { DashboardAccount, DashboardTransaction } from "@/lib/finance/dashb
 import type { Database } from "@/types/database";
 import { QuickTransactionModal } from "@/app/components/QuickTransactionModal";
 import { ExcelExportButton } from "@/app/components/ExcelExportButton";
+import { DeleteConfirmationDialog } from "@/app/components/DeleteConfirmationDialog";
 
 type Category = Database["public"]["Tables"]["categories"]["Row"];
 type ExportScope = "current_month" | "month" | "all";
@@ -42,20 +43,39 @@ function formatMoney(amount: number, currency: string) {
   }
 }
 
-function DeleteTransactionForm({ transactionId }: { transactionId: string }) {
+function DeleteTransactionForm({
+  transactionId,
+  description,
+}: {
+  transactionId: string;
+  description: string;
+}) {
   const [state, formAction, isPending] = useActionState(deleteTransactionAction, initialState);
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
   return (
-    <form action={formAction}>
+    <form action={formAction} ref={formRef}>
       <input name="transaction_id" type="hidden" value={transactionId} />
       <button
         aria-label="刪除交易"
         className="grid size-9 place-items-center rounded-md text-[#8C827A] transition hover:bg-[#fff0ed] hover:text-[#a14131] disabled:opacity-50"
         disabled={isPending}
+        onClick={() => setIsConfirmationOpen(true)}
         title="刪除交易"
-        type="submit"
+        type="button"
       >
         <Trash2 size={16} />
       </button>
+      <DeleteConfirmationDialog
+        description={`確定要刪除「${description}」嗎？此操作將無法復原。`}
+        error={state.error}
+        onCancel={() => setIsConfirmationOpen(false)}
+        onConfirm={() => formRef.current?.requestSubmit()}
+        open={isConfirmationOpen && !state.success}
+        pending={isPending}
+        title="確認要刪除此交易紀錄嗎？"
+      />
       {state.error && (
         <p aria-live="polite" className="absolute right-4 z-10 mt-1 max-w-64 rounded bg-[#fff0ed] p-2 text-xs text-[#9f3e2e]" role="alert">
           {state.error}
@@ -271,7 +291,10 @@ export function RecentTransactions({
                     >
                       <Pencil size={16} />
                     </button>
-                    <DeleteTransactionForm transactionId={transaction.id} />
+                    <DeleteTransactionForm
+                      description={`${transaction.transaction_date} · ${detail} · ${formatMoney(transaction.amount, transaction.currency)}`}
+                      transactionId={transaction.id}
+                    />
                   </article>
                 );
               })}

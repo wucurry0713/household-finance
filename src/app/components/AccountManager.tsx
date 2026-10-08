@@ -33,6 +33,7 @@ import {
 } from "@/app/actions/investments";
 import { accountTypes, type AccountType } from "@/lib/finance/account-types";
 import type { DashboardAccount } from "@/lib/finance/dashboard";
+import { DeleteConfirmationDialog } from "@/app/components/DeleteConfirmationDialog";
 
 const initialState: AccountActionState = { error: null, success: false };
 
@@ -97,6 +98,7 @@ function StockPortfolioManager({
   const [costPrice, setCostPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [deletingInvestment, setDeletingInvestment] = useState<InvestmentRow | null>(null);
   const didCheckPrices = useRef(false);
 
   useEffect(() => {
@@ -188,13 +190,15 @@ function StockPortfolioManager({
   };
 
   const handleDelete = async (investment: InvestmentRow) => {
-    if (!window.confirm(`確定刪除 ${investment.symbol} 的持倉明細？`)) return;
     setPending(true);
     setError(null);
     try {
       const result = await deleteInvestment(investment.id, account.id);
       if (result.error) setError(result.error);
-      else router.refresh();
+      else {
+        setDeletingInvestment(null);
+        router.refresh();
+      }
     } finally {
       setPending(false);
     }
@@ -323,7 +327,7 @@ function StockPortfolioManager({
                       aria-label={`刪除 ${investment.symbol}`}
                       className="rounded-md p-2 text-[#9f3e2e] hover:bg-white"
                       disabled={pending}
-                      onClick={() => void handleDelete(investment)}
+                      onClick={() => setDeletingInvestment(investment)}
                       type="button"
                     >
                       <Trash2 size={15} />
@@ -422,6 +426,21 @@ function StockPortfolioManager({
           )}
         </div>
       </form>
+      <DeleteConfirmationDialog
+        description={
+          deletingInvestment
+            ? `確定要刪除「${deletingInvestment.name}（${deletingInvestment.symbol}）」持倉明細嗎？此操作將無法復原。`
+            : ""
+        }
+        error={error}
+        onCancel={() => setDeletingInvestment(null)}
+        onConfirm={() => {
+          if (deletingInvestment) void handleDelete(deletingInvestment);
+        }}
+        open={deletingInvestment !== null}
+        pending={pending}
+        title="確認要刪除此股票持倉嗎？"
+      />
     </div>
   );
 }
@@ -566,10 +585,13 @@ function AccountForm({
   );
 }
 
-function DeleteAccountForm({ accountId }: { accountId: string }) {
+function DeleteAccountForm({ accountId, accountName }: { accountId: string; accountName: string }) {
   const [state, formAction, isPending] = useActionState(deleteAccountAction, initialState);
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
   return (
-    <form action={formAction}>
+    <form action={formAction} ref={formRef}>
       <input name="account_id" type="hidden" value={accountId} />
       {state.error && (
         <p aria-live="polite" className="mt-2 text-xs text-[#9f3e2e]" role="alert">
@@ -579,11 +601,21 @@ function DeleteAccountForm({ accountId }: { accountId: string }) {
       <button
         className="rounded-md p-2 text-[#8C827A] transition hover:bg-[#fff0ed] hover:text-[#9f3e2e] disabled:opacity-50"
         disabled={isPending}
+        onClick={() => setIsConfirmationOpen(true)}
         title="刪除空帳戶"
-        type="submit"
+        type="button"
       >
         <Archive aria-hidden="true" size={16} />
       </button>
+      <DeleteConfirmationDialog
+        description={`確定要刪除「${accountName}」帳戶嗎？此操作將無法復原。`}
+        error={state.error}
+        onCancel={() => setIsConfirmationOpen(false)}
+        onConfirm={() => formRef.current?.requestSubmit()}
+        open={isConfirmationOpen && !state.success}
+        pending={isPending}
+        title="確認要刪除此帳戶嗎？"
+      />
     </form>
   );
 }
@@ -749,7 +781,7 @@ export function AccountManager({
                       <Pencil size={16} />
                     </button>
                     <span className="grid size-8 place-items-center">
-                      <DeleteAccountForm accountId={account.id} />
+                      <DeleteAccountForm accountId={account.id} accountName={account.name} />
                     </span>
                   </div>
                 </div>
