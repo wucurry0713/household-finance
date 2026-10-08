@@ -699,7 +699,7 @@ export function AccountManager({
             const supportsStocks = ["investment", "stock", "securities"].includes(account.account_type);
             return (
               <Fragment key={account.id}>
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(112px,auto)_auto] items-center gap-x-3 gap-y-2 py-3.5 sm:grid-cols-[minmax(0,1fr)_minmax(160px,auto)_auto]">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(112px,160px)_164px] items-center gap-x-3 gap-y-2 py-3.5">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEC9] text-[#6B573F]">
                       <AccountIcon type={account.account_type} />
@@ -712,41 +712,45 @@ export function AccountManager({
                       </div>
                     </div>
                   </div>
-                  <div className="ml-auto min-w-[112px] text-right font-mono tabular-nums sm:min-w-[160px]">
+                  <div className="min-w-0 text-right font-mono tabular-nums">
                     <p className="break-words text-sm font-semibold text-[#2C2623]">
                       {formatBalance(account.balance, account.currency)}
                     </p>
                   </div>
-                  <div className="flex items-center justify-end gap-1">
-                    {supportsStocks && (
-                      <button
-                        aria-expanded={portfolioAccountId === account.id}
-                        aria-label={`管理 ${account.name} 股票明細`}
-                        className={`flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium ${
-                          portfolioAccountId === account.id
-                            ? "bg-[#E8DEC9] text-[#6B573F]"
-                            : "text-[#8C827A] hover:bg-[#E8DEC9]"
-                        }`}
-                        onClick={() => setPortfolioAccountId(
-                          portfolioAccountId === account.id ? null : account.id,
-                        )}
-                        title="股票明細"
-                        type="button"
-                      >
-                        <TrendingUp size={14} />
-                        股票明細
-                      </button>
-                    )}
+                  <div className="grid w-[164px] grid-cols-[92px_32px_32px] items-center justify-items-center gap-1">
+                    <span className="flex w-[92px] justify-center">
+                      {supportsStocks && (
+                        <button
+                          aria-expanded={portfolioAccountId === account.id}
+                          aria-label={`管理 ${account.name} 股票明細`}
+                          className={`flex h-8 w-[92px] items-center justify-center gap-1 rounded-md px-2 text-xs font-medium ${
+                            portfolioAccountId === account.id
+                              ? "bg-[#E8DEC9] text-[#6B573F]"
+                              : "text-[#8C827A] hover:bg-[#E8DEC9]"
+                          }`}
+                          onClick={() => setPortfolioAccountId(
+                            portfolioAccountId === account.id ? null : account.id,
+                          )}
+                          title="股票明細"
+                          type="button"
+                        >
+                          <TrendingUp size={14} />
+                          股票明細
+                        </button>
+                      )}
+                    </span>
                     <button
                       aria-label={`編輯 ${account.name}`}
-                      className="rounded-md p-2 text-[#8C827A] transition hover:bg-[#E8DEC9] hover:text-[#6B573F]"
+                      className="grid size-8 place-items-center rounded-md text-[#8C827A] transition hover:bg-[#E8DEC9] hover:text-[#6B573F]"
                       onClick={() => setEditingAccount(account)}
                       title="編輯帳戶"
                       type="button"
                     >
                       <Pencil size={16} />
                     </button>
-                    <DeleteAccountForm accountId={account.id} />
+                    <span className="grid size-8 place-items-center">
+                      <DeleteAccountForm accountId={account.id} />
+                    </span>
                   </div>
                 </div>
                 {portfolioAccountId === account.id && supportsStocks && (
