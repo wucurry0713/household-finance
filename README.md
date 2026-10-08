@@ -20,6 +20,16 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Household finance features
+
+- Transaction categories support parent categories and subcategories. The migration
+  `supabase/migrations/20261009000000_category_hierarchy_and_defaults.sql` adds the
+  hierarchy and seeds the default household expense and income categories.
+- The `/analytics` page compares monthly, recent six-month, and year-to-date income,
+  expenses, balances, and category shares.
+- The dashboard can export a complete `.xlsx` workbook with an asset summary,
+  monthly category totals, and transaction details.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

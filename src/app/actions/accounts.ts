@@ -12,6 +12,13 @@ export type AccountActionState = {
 
 const failed = (error: string): AccountActionState => ({ error, success: false });
 
+function accountWriteErrorMessage(error: { code?: string; message: string }) {
+  if (error.code === "23514" && error.message.includes("accounts_account_type_check")) {
+    return "資料庫尚未允許此帳戶類型，請先套用最新的 Supabase migrations。";
+  }
+  return error.message;
+}
+
 function getAccountType(value: FormDataEntryValue | null): AccountType | null {
   return isAccountType(value) ? value : null;
 }
@@ -56,7 +63,7 @@ export async function createAccountAction(
 
   if (error) {
     console.error("[accounts] Create failed", error);
-    return failed(error.message);
+    return failed(accountWriteErrorMessage(error));
   }
 
   revalidatePath("/");
@@ -93,7 +100,7 @@ export async function updateAccountAction(
 
   if (error) {
     console.error("[accounts] Update failed", { accountId, ...error });
-    return failed(error.message);
+    return failed(accountWriteErrorMessage(error));
   }
 
   revalidatePath("/");
