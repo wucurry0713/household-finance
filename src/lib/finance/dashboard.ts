@@ -123,6 +123,22 @@ async function loadMonthTransactions(
   return transactions;
 }
 
+async function loadInvestments(
+  supabase: SupabaseClient<Database>,
+): Promise<InvestmentRow[]> {
+  try {
+    const { data, error } = await supabase.from("investments").select("*");
+    if (error) {
+      reportError("investments", error);
+      return [];
+    }
+    return data ?? [];
+  } catch (error) {
+    console.error("[dashboard] investments query threw", error);
+    return [];
+  }
+}
+
 export async function loadDashboardData(
   supabase: SupabaseClient<Database>,
   householdId: string,
@@ -141,7 +157,7 @@ export async function loadDashboardData(
     valuationsResult,
     liabilitiesResult,
     holdingsResult,
-    investmentsResult,
+    investments,
     preferencesResult,
     membersResult,
     invitationsResult,
@@ -179,7 +195,7 @@ export async function loadDashboardData(
       .from("holdings")
       .select("owner_id, is_joint, account_id, quantity, current_price, average_cost, currency")
       .eq("household_id", householdId),
-    supabase.from("investments").select("*"),
+    loadInvestments(supabase),
     supabase
       .from("household_preferences")
       .select("default_account_id")
@@ -208,7 +224,6 @@ export async function loadDashboardData(
     ["asset valuations", valuationsResult.error],
     ["liabilities", liabilitiesResult.error],
     ["holdings", holdingsResult.error],
-    ["investments", investmentsResult.error],
     ["household preferences", preferencesResult.error],
     ["household members", membersResult.error],
     ["household invitations", invitationsResult.error],
@@ -216,7 +231,6 @@ export async function loadDashboardData(
   for (const [stage, error] of results) {
     if (error) {
       reportError(stage, error);
-      if (stage === "investments") throw new Error(`Investments query failed: ${error.message}`);
     }
   }
 
@@ -232,7 +246,6 @@ export async function loadDashboardData(
   const valuations = valuationsResult.data ?? [];
   const liabilities = liabilitiesResult.data ?? [];
   const holdings = holdingsResult.data ?? [];
-  const investments = investmentsResult.data ?? [];
   const memberships = membersResult.data ?? [];
   const pendingInvitations = invitationsResult.data ?? [];
 

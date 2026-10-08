@@ -11,6 +11,8 @@ type FinanceClient = NonNullable<
   Awaited<ReturnType<typeof getFinanceContext>>["context"]
 >["supabase"];
 
+type InvestmentRow = Database["public"]["Tables"]["investments"]["Row"];
+
 async function loadPages<T>(
   readPage: (
     from: number,
@@ -33,6 +35,18 @@ async function loadPages<T>(
     if (!data || data.length < pageSize) break;
   }
   return rows;
+}
+
+async function loadInvestmentsSafely(supabase: FinanceClient): Promise<InvestmentRow[]> {
+  try {
+    return await loadPages<InvestmentRow>(
+      (from, to) => supabase.from("investments").select("*").range(from, to),
+      "investments",
+    );
+  } catch (error) {
+    console.error("[finance export] investments query failed; using an empty portfolio", error);
+    return [];
+  }
 }
 
 async function loadAssetSummary(
@@ -135,10 +149,7 @@ async function loadAssetSummary(
           .range(from, to),
       "holdings",
     ),
-    loadPages<Investment>(
-      (from, to) => supabase.from("investments").select("*").range(from, to),
-      "investments",
-    ),
+    loadInvestmentsSafely(supabase),
   ]);
 
   const balances = new Map<string, number>(
