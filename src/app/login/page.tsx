@@ -8,9 +8,9 @@ import {
   LockKeyhole,
   Mail,
   UserRound,
-  Wallet,
 } from "lucide-react";
 
+import { BrandMark } from "@/app/components/BrandMark";
 import { signInAction, signUpAction } from "@/app/login/actions";
 
 type AuthMode = "login" | "signup";
@@ -33,19 +33,17 @@ export default function LoginPage() {
   const isPending = isSignup ? isSigningUp : isLoggingIn;
 
   return (
-    <main className="min-h-screen bg-[#f4f7f3] text-[#14251f] lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="relative hidden min-h-screen overflow-hidden bg-[#18392f] px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between xl:px-20">
+    <main className="min-h-screen bg-[#FBF9F5] text-[#2C2623] lg:grid lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="relative hidden min-h-screen overflow-hidden bg-[#B8976C] px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between xl:px-20">
         <div className="absolute -right-28 -top-32 size-[26rem] rounded-full border border-white/10" />
         <div className="absolute -right-8 -top-12 size-[19rem] rounded-full border border-white/10" />
         <div className="relative flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-xl bg-[#c9ed78] text-[#18392f]">
-            <Wallet size={21} strokeWidth={2.2} />
-          </span>
-          <span className="text-sm font-semibold tracking-[0.08em]">TANDEM</span>
+          <BrandMark size={40} />
+          <span className="text-base font-semibold tracking-[0.04em]">Ledgero</span>
         </div>
 
         <div className="relative max-w-xl pb-8">
-          <p className="mb-5 text-xs font-semibold uppercase tracking-[0.16em] text-[#c9ed78]">
+          <p className="mb-5 text-xs font-semibold uppercase tracking-[0.16em] text-[#D4C3A3]">
             家庭財務，一起掌握
           </p>
           <h1 className="max-w-lg text-5xl font-semibold leading-[1.13] tracking-[-0.035em] xl:text-6xl">
@@ -63,7 +61,7 @@ export default function LoginPage() {
                 <p className="text-xs text-white/60">家庭資產總覽</p>
                 <p className="mt-2 text-2xl font-semibold">一起累積的每一步</p>
               </div>
-              <span className="grid size-11 place-items-center rounded-full bg-[#c9ed78] text-[#18392f]">
+              <span className="grid size-11 place-items-center rounded-full bg-[#D4C3A3] text-[#2C2623]">
                 <ArrowRight size={20} />
               </span>
             </div>
@@ -79,20 +77,18 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-        <p className="relative text-xs text-white/45">Tandem · 家庭記帳與資產管理</p>
+        <p className="relative text-xs text-white/45">Ledgero · 家庭記帳與資產管理</p>
       </section>
 
       <section className="flex min-h-screen items-center justify-center px-5 py-12 sm:px-10">
         <div className="w-full max-w-md">
           <div className="mb-10 flex items-center gap-3 lg:hidden">
-            <span className="grid size-10 place-items-center rounded-xl bg-[#18392f] text-[#c9ed78]">
-              <Wallet size={21} />
-            </span>
-            <span className="text-sm font-semibold tracking-[0.08em]">TANDEM</span>
+            <BrandMark size={40} />
+            <span className="text-base font-semibold tracking-[0.04em]">Ledgero</span>
           </div>
 
           <div className="mb-8">
-            <p className="text-sm font-medium text-[#557167]">
+            <p className="text-sm font-medium text-[#8C827A]">
               {isSignup ? "開始建立你們的家庭空間" : "歡迎回來"}
             </p>
             <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">
@@ -100,14 +96,14 @@ export default function LoginPage() {
             </h2>
           </div>
 
-          <div className="mb-7 grid grid-cols-2 border-b border-[#d9e2dc]">
+          <div className="mb-7 grid grid-cols-2 border-b border-[#EFECE6]">
             <button
               type="button"
               onClick={() => setMode("login")}
               className={`border-b-2 px-2 pb-3 text-sm font-medium transition-colors ${
                 !isSignup
-                  ? "border-[#237457] text-[#18392f]"
-                  : "border-transparent text-[#75847d] hover:text-[#18392f]"
+                  ? "border-[#B8976C] text-[#2C2623]"
+                  : "border-transparent text-[#8C827A] hover:text-[#2C2623]"
               }`}
             >
               登入
@@ -117,8 +113,8 @@ export default function LoginPage() {
               onClick={() => setMode("signup")}
               className={`border-b-2 px-2 pb-3 text-sm font-medium transition-colors ${
                 isSignup
-                  ? "border-[#237457] text-[#18392f]"
-                  : "border-transparent text-[#75847d] hover:text-[#18392f]"
+                  ? "border-[#B8976C] text-[#2C2623]"
+                  : "border-transparent text-[#8C827A] hover:text-[#2C2623]"
               }`}
             >
               建立帳戶
@@ -135,12 +131,12 @@ export default function LoginPage() {
                 <span className="relative block">
                   <UserRound
                     aria-hidden="true"
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#718078]"
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C827A]"
                     size={18}
                   />
                   <input
                     autoComplete="nickname"
-                    className="h-12 w-full rounded-lg border border-[#d6dfd9] bg-white pl-11 pr-4 text-sm outline-none transition focus:border-[#237457] focus:ring-2 focus:ring-[#237457]/15"
+                    className="h-12 w-full rounded-lg border border-[#EFECE6] bg-white pl-11 pr-4 text-sm outline-none transition focus:border-[#B8976C] focus:ring-2 focus:ring-[#B8976C]/15"
                     name="display_name"
                     placeholder="例如：雅婷"
                     required
@@ -155,12 +151,12 @@ export default function LoginPage() {
               <span className="relative block">
                 <Mail
                   aria-hidden="true"
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#718078]"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C827A]"
                   size={18}
                 />
                 <input
                   autoComplete="email"
-                  className="h-12 w-full rounded-lg border border-[#d6dfd9] bg-white pl-11 pr-4 text-sm outline-none transition focus:border-[#237457] focus:ring-2 focus:ring-[#237457]/15"
+                  className="h-12 w-full rounded-lg border border-[#EFECE6] bg-white pl-11 pr-4 text-sm outline-none transition focus:border-[#B8976C] focus:ring-2 focus:ring-[#B8976C]/15"
                   name="email"
                   placeholder="name@example.com"
                   required
@@ -174,12 +170,12 @@ export default function LoginPage() {
               <span className="relative block">
                 <LockKeyhole
                   aria-hidden="true"
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#718078]"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C827A]"
                   size={18}
                 />
                 <input
                   autoComplete={isSignup ? "new-password" : "current-password"}
-                  className="h-12 w-full rounded-lg border border-[#d6dfd9] bg-white pl-11 pr-12 text-sm outline-none transition focus:border-[#237457] focus:ring-2 focus:ring-[#237457]/15"
+                  className="h-12 w-full rounded-lg border border-[#EFECE6] bg-white pl-11 pr-12 text-sm outline-none transition focus:border-[#B8976C] focus:ring-2 focus:ring-[#B8976C]/15"
                   minLength={8}
                   name="password"
                   placeholder={isSignup ? "至少 8 個字元" : "輸入密碼"}
@@ -188,7 +184,7 @@ export default function LoginPage() {
                 />
                 <button
                   aria-label={showPassword ? "隱藏密碼" : "顯示密碼"}
-                  className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-[#718078] hover:bg-[#edf2ee]"
+                  className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-[#8C827A] hover:bg-[#E8DEC9]"
                   onClick={() => setShowPassword((visible) => !visible)}
                   title={showPassword ? "隱藏密碼" : "顯示密碼"}
                   type="button"
@@ -210,14 +206,14 @@ export default function LoginPage() {
             {state.message && (
               <p
                 aria-live="polite"
-                className="rounded-lg bg-[#eaf4ed] px-4 py-3 text-sm leading-6 text-[#285943]"
+                className="rounded-lg bg-[#E8DEC9] px-4 py-3 text-sm leading-6 text-[#6B573F]"
               >
                 {state.message}
               </p>
             )}
 
             <button
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#1d6048] px-5 text-sm font-semibold text-white transition hover:bg-[#164c39] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#B8976C] px-5 text-sm font-semibold text-white transition hover:bg-[#A3835B] disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isPending}
               type="submit"
             >
@@ -226,7 +222,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-xs leading-5 text-[#77857e]">
+          <p className="mt-8 text-center text-xs leading-5 text-[#8C827A]">
             建立帳戶即表示你同意妥善保管登入資訊，並與家庭成員共同管理資料。
           </p>
         </div>

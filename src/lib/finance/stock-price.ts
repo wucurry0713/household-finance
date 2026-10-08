@@ -18,7 +18,7 @@ async function fetchChart(symbol: string) {
   url.searchParams.set("range", "1d");
   url.searchParams.set("interval", "1m");
   const response = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 TandemFinance/1.0" },
+    headers: { "User-Agent": "Mozilla/5.0 LedgeroFinance/1.0" },
     signal: AbortSignal.timeout(8_000),
     next: { revalidate: 60 },
   });

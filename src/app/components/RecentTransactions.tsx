@@ -48,7 +48,7 @@ function DeleteTransactionForm({ transactionId }: { transactionId: string }) {
       <input name="transaction_id" type="hidden" value={transactionId} />
       <button
         aria-label="刪除交易"
-        className="grid size-9 place-items-center rounded-md text-[#87948c] transition hover:bg-[#fff0ed] hover:text-[#a14131] disabled:opacity-50"
+        className="grid size-9 place-items-center rounded-md text-[#8C827A] transition hover:bg-[#fff0ed] hover:text-[#a14131] disabled:opacity-50"
         disabled={isPending}
         title="刪除交易"
         type="submit"
@@ -132,16 +132,16 @@ export function RecentTransactions({
   }
 
   return (
-    <section className="border-y border-[#dce5de] bg-white px-5 py-6 sm:px-7">
+    <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-medium text-[#718078]">家庭帳本</p>
+          <p className="text-xs font-medium text-[#8C827A]">家庭帳本</p>
           <h2 className="mt-1 font-semibold">{monthLabel}交易明細</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
             aria-label="CSV 匯出範圍"
-            className="h-9 rounded-lg border border-[#d6dfd9] bg-white px-2.5 text-xs text-[#52665d] outline-none focus:border-[#237457]"
+            className="h-9 rounded-lg border border-[#EFECE6] bg-white px-2.5 text-xs text-[#8C827A] outline-none focus:border-[#B8976C]"
             onChange={(event) => setExportScope(event.target.value as ExportScope)}
             value={exportScope}
           >
@@ -152,14 +152,14 @@ export function RecentTransactions({
           {exportScope === "month" && (
             <input
               aria-label="選擇匯出月份"
-              className="h-9 rounded-lg border border-[#d6dfd9] bg-white px-2 text-xs text-[#52665d] outline-none focus:border-[#237457]"
+              className="h-9 rounded-lg border border-[#EFECE6] bg-white px-2 text-xs text-[#8C827A] outline-none focus:border-[#B8976C]"
               onChange={(event) => setExportMonth(event.target.value)}
               type="month"
               value={exportMonth}
             />
           )}
           <button
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-[#cddbd1] px-3 text-xs font-semibold text-[#285943] transition hover:bg-[#eff5ef] disabled:cursor-wait disabled:opacity-60"
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-[#EFECE6] px-3 text-xs font-semibold text-[#6B573F] transition hover:bg-[#E8DEC9] disabled:cursor-wait disabled:opacity-60"
             disabled={isExporting}
             onClick={downloadCsv}
             type="button"
@@ -177,7 +177,7 @@ export function RecentTransactions({
       )}
 
       {transactions.length ? (
-        <div className="mt-4 divide-y divide-[#edf1ed]">
+        <div className="mt-4 divide-y divide-[#E8DEC9]">
           {transactions.map((transaction) => {
             const isIncome = transaction.kind === "income";
             const isTransfer = transaction.kind === "transfer";
@@ -193,9 +193,9 @@ export function RecentTransactions({
                 <span
                   className={`grid size-10 shrink-0 place-items-center rounded-full ${
                     isIncome
-                      ? "bg-[#eaf4ed] text-[#2f7957]"
+                      ? "bg-[#E8DEC9] text-[#6B573F]"
                       : isTransfer
-                        ? "bg-[#edf1ed] text-[#64766d]"
+                        ? "bg-[#E8DEC9] text-[#8C827A]"
                         : "bg-[#fff1e9] text-[#ab6942]"
                   }`}
                 >
@@ -205,7 +205,7 @@ export function RecentTransactions({
                   <p className="truncate text-sm font-medium">
                     {transaction.notes || transaction.description || (isTransfer ? "帳戶轉帳" : detail)}
                   </p>
-                  <p className="mt-1 truncate text-xs text-[#829088]">
+                  <p className="mt-1 truncate text-xs text-[#8C827A]">
                     {new Date(`${transaction.transaction_date}T00:00:00`).toLocaleDateString("zh-TW", {
                       month: "numeric",
                       day: "numeric",
@@ -216,7 +216,7 @@ export function RecentTransactions({
                 </div>
                 <p
                   className={`whitespace-nowrap text-sm font-semibold ${
-                    isIncome ? "text-[#2f7957]" : isTransfer ? "text-[#65766d]" : "text-[#18392f]"
+                    isIncome ? "text-[#6B573F]" : isTransfer ? "text-[#8C827A]" : "text-[#2C2623]"
                   }`}
                 >
                   {isIncome ? "+" : isTransfer ? "" : "−"}
@@ -224,7 +224,7 @@ export function RecentTransactions({
                 </p>
                 <button
                   aria-label="編輯交易"
-                  className="grid size-9 shrink-0 place-items-center rounded-md text-[#87948c] transition hover:bg-[#edf2ee] hover:text-[#285943]"
+                  className="grid size-9 shrink-0 place-items-center rounded-md text-[#8C827A] transition hover:bg-[#E8DEC9] hover:text-[#6B573F]"
                   onClick={() => setEditingTransaction(transaction)}
                   title="編輯交易"
                   type="button"
@@ -237,7 +237,7 @@ export function RecentTransactions({
           })}
         </div>
       ) : (
-        <div className="mt-4 rounded-lg border border-dashed border-[#d5dfd8] px-5 py-10 text-center text-sm text-[#77857e]">
+        <div className="mt-4 rounded-lg border border-dashed border-[#EFECE6] px-5 py-10 text-center text-sm text-[#8C827A]">
           尚無交易紀錄，使用「記一筆」開始記帳。
         </div>
       )}

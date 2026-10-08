@@ -13,12 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tandem | 家庭記帳與資產管理",
+  title: "Ledgero | 家庭記帳與資產管理",
   description: "一起管理家庭收支與資產。",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Tandem",
+    title: "Ledgero",
   },
   icons: {
     icon: [
@@ -33,7 +33,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#18392f",
+  themeColor: "#FBF9F5",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

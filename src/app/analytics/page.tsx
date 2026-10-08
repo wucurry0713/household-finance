@@ -11,7 +11,7 @@ import { normalizeMonthKey } from "@/lib/finance/month";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "分析統計 | Tandem",
+  title: "分析統計 | Ledgero",
 };
 
 export default async function AnalyticsPage({
@@ -48,7 +48,7 @@ export default async function AnalyticsPage({
     "家庭成員";
 
   return (
-    <main className="min-h-screen bg-[#f4f7f3] text-[#14251f]">
+    <main className="min-h-screen bg-[#FBF9F5] text-[#2C2623]">
       <AppHeader currentPage="analytics" displayName={displayName} month={selectedMonth} />
       <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl sm:px-8 sm:py-14">
         <MonthSelector month={selectedMonth} />

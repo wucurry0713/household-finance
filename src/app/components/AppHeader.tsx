@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Wallet } from "lucide-react";
 
+import { BrandMark } from "@/app/components/BrandMark";
 import { signOutAction } from "@/app/login/actions";
 
 export function AppHeader({
@@ -13,21 +13,19 @@ export function AppHeader({
   month: string;
 }) {
   return (
-    <header className="border-b border-[#dce5de] bg-white pt-[env(safe-area-inset-top)]">
+    <header className="border-b border-[#EFECE6] bg-white pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-8">
         <Link className="flex shrink-0 items-center gap-2.5" href="/">
-          <span className="grid size-9 place-items-center rounded-lg bg-[#18392f] text-[#c9ed78]">
-            <Wallet size={19} />
-          </span>
-          <span className="text-sm font-semibold tracking-[0.08em]">TANDEM</span>
+          <BrandMark />
+          <span className="text-base font-semibold tracking-[0.04em] text-[#2C2623]">Ledgero</span>
         </Link>
         <nav aria-label="主要導覽" className="flex items-center gap-1">
           <Link
             aria-current={currentPage === "dashboard" ? "page" : undefined}
             className={`rounded-md px-3 py-2 text-sm font-medium transition ${
               currentPage === "dashboard"
-                ? "bg-[#edf5ef] text-[#1d6048]"
-                : "text-[#60736a] hover:bg-[#edf2ee]"
+                ? "bg-[#B8976C] text-white"
+                : "text-[#8C827A] hover:bg-[#F3EEE5]"
             }`}
             href={`/?month=${month}`}
           >
@@ -37,8 +35,8 @@ export function AppHeader({
             aria-current={currentPage === "analytics" ? "page" : undefined}
             className={`rounded-md px-3 py-2 text-sm font-medium transition ${
               currentPage === "analytics"
-                ? "bg-[#edf5ef] text-[#1d6048]"
-                : "text-[#60736a] hover:bg-[#edf2ee]"
+                ? "bg-[#B8976C] text-white"
+                : "text-[#8C827A] hover:bg-[#F3EEE5]"
             }`}
             href={`/analytics?month=${month}`}
           >
@@ -46,11 +44,11 @@ export function AppHeader({
           </Link>
         </nav>
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-          <span className="hidden max-w-36 truncate text-sm text-[#60736a] sm:inline">
+          <span className="hidden max-w-36 truncate text-sm text-[#8C827A] sm:inline">
             {displayName}
           </span>
           <form action={signOutAction}>
-            <button className="rounded-md px-3 py-2 text-sm font-medium text-[#52665d] transition hover:bg-[#edf2ee] hover:text-[#18392f]">
+            <button className="rounded-md px-3 py-2 text-sm font-medium text-[#6B573F] transition hover:bg-[#F3EEE5] hover:text-[#2C2623]">
               登出
             </button>
           </form>

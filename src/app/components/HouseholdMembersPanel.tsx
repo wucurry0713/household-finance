@@ -26,30 +26,30 @@ export function HouseholdMembersPanel({
   );
 
   return (
-    <section className="border-y border-[#dce5de] bg-white px-5 py-6 sm:px-7">
+    <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#eaf2ec] text-[#237457]">
+        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEC9] text-[#6B573F]">
           <Users size={19} />
         </span>
         <div>
           <h2 className="font-semibold">家庭成員</h2>
-          <p className="mt-1 text-sm text-[#718078]">家庭資料由成員共同管理</p>
+          <p className="mt-1 text-sm text-[#8C827A]">家庭資料由成員共同管理</p>
         </div>
       </div>
 
       <div className="mt-5 space-y-3">
         {members.map((member) => (
           <div className="flex items-center gap-3" key={member.userId}>
-            <span className="grid size-9 place-items-center rounded-full bg-[#edf2ee] text-[#557167]">
+            <span className="grid size-9 place-items-center rounded-full bg-[#E8DEC9] text-[#8C827A]">
               <UserRound size={17} />
             </span>
             <span className="min-w-0 flex-1 truncate text-sm font-medium">
               {member.displayName}
               {member.userId === currentUserId && (
-                <span className="ml-2 text-xs font-normal text-[#829088]">我</span>
+                <span className="ml-2 text-xs font-normal text-[#8C827A]">我</span>
               )}
             </span>
-            <span className="text-xs text-[#829088]">
+            <span className="text-xs text-[#8C827A]">
               {member.role === "owner" ? "管理者" : "成員"}
             </span>
           </div>
@@ -57,11 +57,11 @@ export function HouseholdMembersPanel({
       </div>
 
       {pendingInvitations.length > 0 && (
-        <div className="mt-5 border-t border-[#edf1ed] pt-4">
-          <p className="mb-3 text-xs font-medium text-[#829088]">等待註冊或登入</p>
+        <div className="mt-5 border-t border-[#EFECE6] pt-4">
+          <p className="mb-3 text-xs font-medium text-[#8C827A]">等待註冊或登入</p>
           <div className="space-y-2">
             {pendingInvitations.map((invitation) => (
-              <p className="truncate text-sm text-[#65766d]" key={invitation.id}>
+              <p className="truncate text-sm text-[#8C827A]" key={invitation.id}>
                 {invitation.email}
               </p>
             ))}
@@ -69,7 +69,7 @@ export function HouseholdMembersPanel({
         </div>
       )}
 
-      <form action={formAction} className="mt-5 border-t border-[#edf1ed] pt-4">
+      <form action={formAction} className="mt-5 border-t border-[#EFECE6] pt-4">
         <label className="mb-2 block text-sm font-medium" htmlFor="invite-member-email">
           邀請另一位成員
         </label>
@@ -77,12 +77,12 @@ export function HouseholdMembersPanel({
           <div className="relative min-w-0 flex-1">
             <MailPlus
               aria-hidden="true"
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#829088]"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C827A]"
               size={17}
             />
             <input
               autoComplete="email"
-              className="h-10 w-full rounded-lg border border-[#d6dfd9] bg-white pl-10 pr-3 text-sm outline-none focus:border-[#237457] focus:ring-2 focus:ring-[#237457]/15"
+              className="h-10 w-full rounded-lg border border-[#EFECE6] bg-white pl-10 pr-3 text-sm outline-none focus:border-[#B8976C] focus:ring-2 focus:ring-[#B8976C]/15"
               id="invite-member-email"
               name="email"
               placeholder="name@example.com"
@@ -91,14 +91,14 @@ export function HouseholdMembersPanel({
             />
           </div>
           <button
-            className="h-10 shrink-0 rounded-lg bg-[#1d6048] px-3 text-sm font-semibold text-white transition hover:bg-[#164c39] disabled:opacity-60"
+            className="h-10 shrink-0 rounded-lg bg-[#B8976C] px-3 text-sm font-semibold text-white transition hover:bg-[#A3835B] disabled:opacity-60"
             disabled={isPending}
             type="submit"
           >
             {isPending ? "處理中…" : "邀請"}
           </button>
         </div>
-        <p className="mt-2 text-xs leading-5 text-[#829088]">
+        <p className="mt-2 text-xs leading-5 text-[#8C827A]">
           已有帳號會直接加入；尚未註冊者使用此 Email 登入後會自動加入。
         </p>
         {state.error && (
@@ -107,7 +107,7 @@ export function HouseholdMembersPanel({
           </p>
         )}
         {state.message && (
-          <p aria-live="polite" className="mt-3 text-sm text-[#285943]" role="status">
+          <p aria-live="polite" className="mt-3 text-sm text-[#6B573F]" role="status">
             {state.message}
           </p>
         )}

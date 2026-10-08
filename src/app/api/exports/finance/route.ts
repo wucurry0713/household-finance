@@ -308,7 +308,7 @@ export async function GET() {
     ]);
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = "Tandem";
+    workbook.creator = "Ledgero";
     workbook.created = new Date();
 
     const assetsSheet = workbook.addWorksheet("資產負債總覽");
@@ -401,7 +401,7 @@ export async function GET() {
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const filename = `Tandem-家庭財務報表-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const filename = `Ledgero-家庭財務報表-${new Date().toISOString().slice(0, 10)}.xlsx`;
     return new Response(buffer, {
       headers: {
         "Content-Type":

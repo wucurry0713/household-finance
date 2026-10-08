@@ -220,14 +220,14 @@ function StockPortfolioManager({
   const returnRate = portfolio.cost > 0 ? (profit / portfolio.cost) * 100 : 0;
 
   return (
-    <div className="col-span-2 mt-2 rounded-xl border border-[#dce5de] bg-[#f7faf7] p-4 sm:w-full">
+    <div className="col-span-2 mt-2 rounded-xl border border-[#EFECE6] bg-white p-4 sm:w-full">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-[#18392f]">股票投資組合</h3>
-          <p className="mt-1 text-xs text-[#718078]">報價可能延遲，以下市值依最近一次更新價格計算。</p>
+          <h3 className="font-semibold text-[#2C2623]">股票投資組合</h3>
+          <p className="mt-1 text-xs text-[#8C827A]">報價可能延遲，以下市值依最近一次更新價格計算。</p>
         </div>
         <button
-          className="flex h-9 items-center gap-1.5 rounded-lg border border-[#cddbd1] px-3 text-xs font-semibold text-[#285943] disabled:opacity-50"
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-[#EFECE6] px-3 text-xs font-semibold text-[#6B573F] disabled:opacity-50"
           disabled={pending || !investments.length}
           onClick={() => void Promise.all(investments.map(handleRefresh))}
           type="button"
@@ -239,25 +239,25 @@ function StockPortfolioManager({
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-lg bg-white p-3">
-          <p className="text-xs text-[#718078]">目前市值</p>
+          <p className="text-xs text-[#8C827A]">目前市值</p>
           <p className="mt-1 break-words text-sm font-semibold">{formatBalance(portfolio.value, account.currency)}</p>
         </div>
         <div className="rounded-lg bg-white p-3">
-          <p className="text-xs text-[#718078]">未實現損益</p>
-          <p className={`mt-1 break-words text-sm font-semibold ${profit < 0 ? "text-[#a05b48]" : "text-[#237457]"}`}>
+          <p className="text-xs text-[#8C827A]">未實現損益</p>
+          <p className={`mt-1 break-words text-sm font-semibold ${profit < 0 ? "text-[#a05b48]" : "text-[#6B573F]"}`}>
             {formatBalance(profit, account.currency)}
           </p>
         </div>
         <div className="rounded-lg bg-white p-3">
-          <p className="text-xs text-[#718078]">整體報酬率</p>
-          <p className={`mt-1 text-sm font-semibold ${profit < 0 ? "text-[#a05b48]" : "text-[#237457]"}`}>
+          <p className="text-xs text-[#8C827A]">整體報酬率</p>
+          <p className={`mt-1 text-sm font-semibold ${profit < 0 ? "text-[#a05b48]" : "text-[#6B573F]"}`}>
             {returnRate.toFixed(2)}%
           </p>
         </div>
       </div>
 
       {investments.length ? (
-        <div className="mt-4 divide-y divide-[#e6ece7]">
+        <div className="mt-4 divide-y divide-[#EFECE6]">
           {investments.map((investment) => {
             const shares = Number(investment.shares);
             const currentPrice = Number(investment.current_price);
@@ -283,19 +283,19 @@ function StockPortfolioManager({
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="break-words text-sm font-semibold">
-                      {investment.name} <span className="text-xs font-normal text-[#718078]">{investment.symbol}</span>
+                      {investment.name} <span className="text-xs font-normal text-[#8C827A]">{investment.symbol}</span>
                     </p>
-                    <p className="mt-1 text-xs text-[#718078]">
+                    <p className="mt-1 text-xs text-[#8C827A]">
                       {shares.toLocaleString("zh-TW")} 股 · 現價{" "}
                       {formatBalance(currentPrice, investment.currency)}
                     </p>
-                    <p className="mt-1 text-xs text-[#718078]">
+                    <p className="mt-1 text-xs text-[#8C827A]">
                       持倉市值 {formatBalance(marketValue, investment.currency)}
                       {investment.currency === "USD" && (
                         <> · 約 {formatBalance(marketValueTwd, "TWD")}</>
                       )}
                     </p>
-                    <p className={`mt-1 text-xs font-medium ${pnlInAccountCurrency < 0 ? "text-[#a05b48]" : "text-[#237457]"}`}>
+                    <p className={`mt-1 text-xs font-medium ${pnlInAccountCurrency < 0 ? "text-[#a05b48]" : "text-[#6B573F]"}`}>
                       未實現損益 {formatBalance(pnlInAccountCurrency, account.currency)} ·{" "}
                       {positionReturn.toFixed(2)}%
                     </p>
@@ -303,7 +303,7 @@ function StockPortfolioManager({
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       aria-label={`編輯 ${investment.symbol}`}
-                      className="rounded-md p-2 text-[#718078] hover:bg-white"
+                      className="rounded-md p-2 text-[#8C827A] hover:bg-white"
                       disabled={pending}
                       onClick={() => editInvestment(investment)}
                       type="button"
@@ -312,7 +312,7 @@ function StockPortfolioManager({
                     </button>
                     <button
                       aria-label={`更新 ${investment.symbol} 股價`}
-                      className="rounded-md p-2 text-[#718078] hover:bg-white"
+                      className="rounded-md p-2 text-[#8C827A] hover:bg-white"
                       disabled={pending}
                       onClick={() => void handleRefresh(investment)}
                       type="button"
@@ -330,7 +330,7 @@ function StockPortfolioManager({
                     </button>
                   </div>
                 </div>
-                <p className="mt-1 text-[11px] text-[#829088]">
+                <p className="mt-1 text-[11px] text-[#8C827A]">
                   更新時間 {new Date(investment.updated_at).toLocaleString("zh-TW")}
                 </p>
               </div>
@@ -338,18 +338,18 @@ function StockPortfolioManager({
           })}
         </div>
       ) : (
-        <p className="mt-4 rounded-lg border border-dashed border-[#d5dfd8] px-3 py-5 text-center text-sm text-[#77857e]">
+        <p className="mt-4 rounded-lg border border-dashed border-[#EFECE6] px-3 py-5 text-center text-sm text-[#8C827A]">
           尚無股票持倉，新增後會以最新報價估算帳戶餘額。
         </p>
       )}
 
-      <form className="mt-4 space-y-3 border-t border-[#e2eae3] pt-4" onSubmit={handleSave}>
+      <form className="mt-4 space-y-3 border-t border-[#EFECE6] pt-4" onSubmit={handleSave}>
         <h4 className="text-sm font-semibold">{editingId ? "編輯持倉" : "新增股票"}</h4>
         <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs text-[#687a70]">
+          <label className="text-xs text-[#8C827A]">
             市場
             <select
-              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm text-[#18392f]"
+              className="mt-1 h-10 w-full rounded-lg border border-[#EFECE6] bg-white px-2 text-sm text-[#2C2623]"
               onChange={(event) => setMarket(event.target.value as "TW" | "US")}
               value={market}
             >
@@ -357,29 +357,29 @@ function StockPortfolioManager({
               <option value="US">美股 (USD)</option>
             </select>
           </label>
-          <label className="text-xs text-[#687a70]">
+          <label className="text-xs text-[#8C827A]">
             股票代號
             <input
               autoComplete="off"
-              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm uppercase text-[#18392f]"
+              className="mt-1 h-10 w-full rounded-lg border border-[#EFECE6] bg-white px-2 text-sm uppercase text-[#2C2623]"
               onChange={(event) => setSymbol(event.target.value)}
               placeholder={market === "TW" ? "2330" : "NVDA"}
               required
               value={symbol}
             />
           </label>
-          <label className="text-xs text-[#687a70]">
+          <label className="text-xs text-[#8C827A]">
             股票名稱（可留空自動帶入）
             <input
-              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm text-[#18392f]"
+              className="mt-1 h-10 w-full rounded-lg border border-[#EFECE6] bg-white px-2 text-sm text-[#2C2623]"
               onChange={(event) => setName(event.target.value)}
               value={name}
             />
           </label>
-          <label className="text-xs text-[#687a70]">
+          <label className="text-xs text-[#8C827A]">
             持有股數
             <input
-              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm text-[#18392f]"
+              className="mt-1 h-10 w-full rounded-lg border border-[#EFECE6] bg-white px-2 text-sm text-[#2C2623]"
               min="0.000001"
               onChange={(event) => setShares(event.target.value)}
               required
@@ -388,10 +388,10 @@ function StockPortfolioManager({
               value={shares}
             />
           </label>
-          <label className="col-span-2 text-xs text-[#687a70]">
+          <label className="col-span-2 text-xs text-[#8C827A]">
             平均買入單價
             <input
-              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm text-[#18392f]"
+              className="mt-1 h-10 w-full rounded-lg border border-[#EFECE6] bg-white px-2 text-sm text-[#2C2623]"
               min="0.000001"
               onChange={(event) => setCostPrice(event.target.value)}
               required
@@ -404,7 +404,7 @@ function StockPortfolioManager({
         {error && <p aria-live="polite" className="text-sm text-[#9f3e2e]" role="alert">{error}</p>}
         <div className="flex gap-2">
           <button
-            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[#1d6048] text-sm font-semibold text-white disabled:opacity-50"
+            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[#B8976C] text-sm font-semibold text-white disabled:opacity-50"
             disabled={pending}
             type="submit"
           >
@@ -413,7 +413,7 @@ function StockPortfolioManager({
           </button>
           {editingId && (
             <button
-              className="h-10 rounded-lg border border-[#cddbd1] px-3 text-sm text-[#52675c]"
+              className="h-10 rounded-lg border border-[#EFECE6] px-3 text-sm text-[#8C827A]"
               onClick={resetForm}
               type="button"
             >
@@ -445,19 +445,19 @@ function AccountForm({
       <section
         aria-labelledby="account-form-title"
         aria-modal="true"
-        className="w-full max-w-lg rounded-t-2xl bg-[#f8faf7] p-5 shadow-2xl sm:rounded-2xl sm:p-7"
+        className="w-full max-w-lg rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl sm:p-7"
         role="dialog"
       >
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-[#6b7d73]">家庭帳戶</p>
+            <p className="text-xs font-medium text-[#8C827A]">家庭帳戶</p>
             <h2 className="mt-1 text-xl font-semibold" id="account-form-title">
               {account ? "編輯帳戶" : "新增帳戶"}
             </h2>
           </div>
           <button
             aria-label="關閉"
-            className="grid size-10 place-items-center rounded-full text-[#63756c] hover:bg-[#eaf0eb]"
+            className="grid size-10 place-items-center rounded-full text-[#8C827A] hover:bg-[#E8DEC9]"
             onClick={onClose}
             title="關閉"
             type="button"
@@ -472,7 +472,7 @@ function AccountForm({
             <span className="mb-2 block text-sm font-medium">帳戶名稱</span>
             <input
               autoComplete="off"
-              className="h-11 w-full rounded-lg border border-[#d6dfd9] bg-white px-3 text-sm outline-none focus:border-[#237457] focus:ring-2 focus:ring-[#237457]/15"
+              className="h-11 w-full rounded-lg border border-[#EFECE6] bg-white px-3 text-sm outline-none focus:border-[#B8976C] focus:ring-2 focus:ring-[#B8976C]/15"
               defaultValue={account?.name ?? ""}
               maxLength={80}
               name="name"
@@ -485,7 +485,7 @@ function AccountForm({
             <label className="block">
               <span className="mb-2 block text-sm font-medium">帳戶類型</span>
               <select
-                className="h-11 w-full rounded-lg border border-[#d6dfd9] bg-white px-3 text-sm outline-none focus:border-[#237457]"
+                className="h-11 w-full rounded-lg border border-[#EFECE6] bg-white px-3 text-sm outline-none focus:border-[#B8976C]"
                 defaultValue={account?.account_type ?? "cash"}
                 name="account_type"
                 required
@@ -500,7 +500,7 @@ function AccountForm({
             <label className="block">
               <span className="mb-2 block text-sm font-medium">幣別</span>
               <input
-                className="h-11 w-full rounded-lg border border-[#d6dfd9] bg-white px-3 text-sm uppercase outline-none focus:border-[#237457]"
+                className="h-11 w-full rounded-lg border border-[#EFECE6] bg-white px-3 text-sm uppercase outline-none focus:border-[#B8976C]"
                 defaultValue={account?.currency ?? "TWD"}
                 maxLength={3}
                 minLength={3}
@@ -514,7 +514,7 @@ function AccountForm({
           <label className="block">
             <span className="mb-2 block text-sm font-medium">期初餘額</span>
             <input
-              className="h-11 w-full rounded-lg border border-[#d6dfd9] bg-white px-3 text-sm outline-none focus:border-[#237457]"
+              className="h-11 w-full rounded-lg border border-[#EFECE6] bg-white px-3 text-sm outline-none focus:border-[#B8976C]"
               defaultValue={account?.opening_balance ?? 0}
               inputMode="decimal"
               name="opening_balance"
@@ -523,9 +523,9 @@ function AccountForm({
             />
           </label>
 
-          <label className="flex items-center gap-3 rounded-lg border border-[#dce5de] bg-white px-3 py-3 text-sm">
+          <label className="flex items-center gap-3 rounded-lg border border-[#EFECE6] bg-white px-3 py-3 text-sm">
             <input
-              className="size-4 accent-[#237457]"
+              className="size-4 accent-[#B8976C]"
               defaultChecked={account?.is_shared ?? true}
               name="is_shared"
               type="checkbox"
@@ -540,7 +540,7 @@ function AccountForm({
           )}
 
           <button
-            className="flex h-11 w-full items-center justify-center rounded-lg bg-[#1d6048] text-sm font-semibold text-white transition hover:bg-[#164c39] disabled:opacity-60"
+            className="flex h-11 w-full items-center justify-center rounded-lg bg-[#B8976C] text-sm font-semibold text-white transition hover:bg-[#A3835B] disabled:opacity-60"
             disabled={isPending}
             type="submit"
           >
@@ -563,7 +563,7 @@ function DeleteAccountForm({ accountId }: { accountId: string }) {
         </p>
       )}
       <button
-        className="rounded-md p-2 text-[#7a8981] transition hover:bg-[#fff0ed] hover:text-[#9f3e2e] disabled:opacity-50"
+        className="rounded-md p-2 text-[#8C827A] transition hover:bg-[#fff0ed] hover:text-[#9f3e2e] disabled:opacity-50"
         disabled={isPending}
         title="刪除空帳戶"
         type="submit"
@@ -590,8 +590,8 @@ function SetDefaultAccountForm({
           aria-pressed={isDefault}
           className={`flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium transition disabled:opacity-60 ${
             isDefault
-              ? "bg-[#edf5e7] text-[#527342]"
-              : "text-[#728178] hover:bg-[#edf2ee] hover:text-[#285943]"
+              ? "bg-[#E8DEC9] text-[#6B573F]"
+              : "text-[#8C827A] hover:bg-[#E8DEC9] hover:text-[#6B573F]"
           }`}
           disabled={isPending || isDefault}
           title={isDefault ? "目前預設扣款帳戶" : "設為預設扣款帳戶"}
@@ -624,14 +624,14 @@ export function AccountManager({
   const [portfolioAccountId, setPortfolioAccountId] = useState<string | null>(null);
 
   return (
-    <section className="border-y border-[#dce5de] bg-white px-5 py-6 sm:px-7">
+    <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">家庭帳戶</h2>
-          <p className="mt-1 text-sm text-[#718078]">現金、銀行與信用卡帳戶</p>
+          <p className="mt-1 text-sm text-[#8C827A]">現金、銀行與信用卡帳戶</p>
         </div>
         <button
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-[#cddbd1] px-3 text-sm font-semibold text-[#285943] transition hover:bg-[#eff5ef]"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-[#EFECE6] px-3 text-sm font-semibold text-[#6B573F] transition hover:bg-[#E8DEC9]"
           onClick={() => setIsCreating(true)}
           type="button"
         >
@@ -641,28 +641,28 @@ export function AccountManager({
       </div>
 
       {accounts.length ? (
-        <div className="mt-5 divide-y divide-[#edf1ed]">
+        <div className="mt-5 divide-y divide-[#E8DEC9]">
           {accounts.map((account) => {
             const supportsStocks = ["investment", "stock", "securities"].includes(account.account_type);
             return (
               <Fragment key={account.id}>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3.5 sm:flex sm:gap-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#eaf2ec] text-[#237457]">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEC9] text-[#6B573F]">
                       <AccountIcon type={account.account_type} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <p className="truncate text-sm font-medium">{account.name}</p>
-                        <span className="text-xs text-[#829088]">{accountTypeLabels[account.account_type]}</span>
-                        {!account.is_shared && <span className="text-xs text-[#829088]">個人</span>}
+                        <span className="text-xs text-[#8C827A]">{accountTypeLabels[account.account_type]}</span>
+                        {!account.is_shared && <span className="text-xs text-[#8C827A]">個人</span>}
                       </div>
-                      <p className="mt-1 text-xs text-[#829088]">
+                      <p className="mt-1 text-xs text-[#8C827A]">
                         期初 {formatBalance(account.opening_balance, account.currency)}
                       </p>
                     </div>
                   </div>
-                  <p className="min-w-0 max-w-32 text-right text-sm font-semibold text-[#18392f] [overflow-wrap:anywhere] sm:max-w-none sm:whitespace-nowrap">
+                  <p className="min-w-0 max-w-32 text-right text-sm font-semibold text-[#2C2623] [overflow-wrap:anywhere] sm:max-w-none sm:whitespace-nowrap">
                     {formatBalance(account.balance, account.currency)}
                   </p>
                   <div className="col-span-2 flex items-center justify-end gap-1 sm:ml-auto">
@@ -672,8 +672,8 @@ export function AccountManager({
                         aria-label={`管理 ${account.name} 股票明細`}
                         className={`flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium ${
                           portfolioAccountId === account.id
-                            ? "bg-[#edf5e7] text-[#285943]"
-                            : "text-[#728178] hover:bg-[#edf2ee]"
+                            ? "bg-[#E8DEC9] text-[#6B573F]"
+                            : "text-[#8C827A] hover:bg-[#E8DEC9]"
                         }`}
                         onClick={() => setPortfolioAccountId(
                           portfolioAccountId === account.id ? null : account.id,
@@ -691,7 +691,7 @@ export function AccountManager({
                     />
                     <button
                       aria-label={`編輯 ${account.name}`}
-                      className="rounded-md p-2 text-[#7a8981] transition hover:bg-[#edf2ee] hover:text-[#285943]"
+                      className="rounded-md p-2 text-[#8C827A] transition hover:bg-[#E8DEC9] hover:text-[#6B573F]"
                       onClick={() => setEditingAccount(account)}
                       title="編輯帳戶"
                       type="button"
@@ -712,7 +712,7 @@ export function AccountManager({
           })}
         </div>
       ) : (
-        <div className="mt-5 rounded-lg border border-dashed border-[#d5dfd8] px-5 py-8 text-center text-sm text-[#77857e]">
+        <div className="mt-5 rounded-lg border border-dashed border-[#EFECE6] px-5 py-8 text-center text-sm text-[#8C827A]">
           尚未新增帳戶
         </div>
       )}

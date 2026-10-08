@@ -21,7 +21,7 @@ export function ExcelExportButton() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Tandem-家庭財務報表-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.download = `Ledgero-家庭財務報表-${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.append(link);
       link.click();
       link.remove();
@@ -38,7 +38,7 @@ export function ExcelExportButton() {
   return (
     <div>
       <button
-        className="flex h-9 items-center gap-1.5 rounded-lg bg-[#1d6048] px-3 text-xs font-semibold text-white transition hover:bg-[#164c39] disabled:cursor-wait disabled:opacity-60"
+        className="flex h-9 items-center gap-1.5 rounded-lg bg-[#B8976C] px-3 text-xs font-semibold text-white transition hover:bg-[#A3835B] disabled:cursor-wait disabled:opacity-60"
         disabled={isExporting}
         onClick={exportWorkbook}
         type="button"

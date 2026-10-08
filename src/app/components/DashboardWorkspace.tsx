@@ -39,12 +39,12 @@ function SummaryItem({
   value: string;
 }) {
   return (
-    <article className="border-l-2 border-[#b6d98c] bg-white px-5 py-5">
-      <div className="flex items-center gap-2 text-[#557167]">
+    <article className="border-l-2 border-[#D4C3A3] bg-white px-5 py-5">
+      <div className="flex items-center gap-2 text-[#8C827A]">
         {icon}
         <h2 className="text-sm font-medium">{label}</h2>
       </div>
-      <p className="mt-5 text-lg font-semibold text-[#60736a]">{value}</p>
+      <p className="mt-5 text-lg font-semibold text-[#8C827A]">{value}</p>
     </article>
   );
 }
@@ -60,8 +60,8 @@ function AssetLine({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-[#687a70]">{label}</span>
-      <span className={value < 0 ? "font-medium text-[#a05b48]" : "font-medium text-[#263c32]"}>
+      <span className="text-[#8C827A]">{label}</span>
+      <span className={value < 0 ? "font-medium text-[#a05b48]" : "font-medium text-[#2C2623]"}>
         {formatMoney(value, currency)}
       </span>
     </div>
@@ -85,12 +85,12 @@ function CashFlowLine({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-        <span className="text-[#687a70]">{label}</span>
-        <span className="font-medium text-[#263c32]">{formatMoney(amount, currency)}</span>
+        <span className="text-[#8C827A]">{label}</span>
+        <span className="font-medium text-[#2C2623]">{formatMoney(amount, currency)}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-[#edf1ed]">
+      <div className="h-2 overflow-hidden rounded-full bg-[#E8DEC9]">
         <div
-          className={`h-full rounded-full ${tone === "income" ? "bg-[#6eaa7c]" : "bg-[#d99a72]"}`}
+          className={`h-full rounded-full ${tone === "income" ? "bg-[#B8976C]" : "bg-[#D4C3A3]"}`}
           style={{ width: `${width}%` }}
         />
       </div>
@@ -136,27 +136,27 @@ export function DashboardWorkspace({
     <>
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm font-medium text-[#557167]">家庭總覽</p>
+          <p className="text-sm font-medium text-[#8C827A]">家庭總覽</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">
             {activeMember ? `${activeMember.displayName} 的視角` : householdName}
           </h1>
         </div>
-        <div className="text-sm text-[#66776f]">
-          歡迎回來，<span className="font-medium text-[#18392f]">{displayName}</span>
+        <div className="text-sm text-[#8C827A]">
+          歡迎回來，<span className="font-medium text-[#2C2623]">{displayName}</span>
         </div>
       </div>
 
       <div
         aria-label="切換 Dashboard 視角"
-        className="mt-7 flex w-full gap-1 overflow-x-auto rounded-lg bg-[#e9efea] p-1 sm:w-fit"
+        className="mt-7 flex w-full gap-1 overflow-x-auto rounded-lg bg-[#E8DEC9] p-1 sm:w-fit"
         role="group"
       >
         <button
           aria-pressed={selectedOwnerId === null}
           className={`flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${
             selectedOwnerId === null
-              ? "bg-white text-[#1d6048] shadow-sm"
-              : "text-[#687a70] hover:text-[#18392f]"
+              ? "bg-[#B8976C] text-white shadow-sm"
+              : "text-[#8C827A] hover:text-[#2C2623]"
           }`}
           onClick={() => setSelectedOwnerId(null)}
           type="button"
@@ -169,8 +169,8 @@ export function DashboardWorkspace({
             aria-pressed={selectedOwnerId === member.userId}
             className={`flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${
               selectedOwnerId === member.userId
-                ? "bg-white text-[#1d6048] shadow-sm"
-                : "text-[#687a70] hover:text-[#18392f]"
+                ? "bg-[#B8976C] text-white shadow-sm"
+                : "text-[#8C827A] hover:text-[#2C2623]"
             }`}
             key={member.userId}
             onClick={() => setSelectedOwnerId(member.userId)}
@@ -223,14 +223,14 @@ export function DashboardWorkspace({
         </div>
 
         <aside className="min-w-0 space-y-8">
-          <section className="border-y border-[#dce5de] bg-white px-5 py-6 sm:px-7">
+          <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
             <div className="flex items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#eaf2ec] text-[#237457]">
+              <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEC9] text-[#6B573F]">
                 <Wallet size={19} />
               </span>
               <div>
                 <h2 className="font-semibold">資產配置</h2>
-                <p className="mt-1 text-xs text-[#829088]">以 {baseCurrency} 計</p>
+                <p className="mt-1 text-xs text-[#8C827A]">以 {baseCurrency} 計</p>
               </div>
             </div>
             <div className="mt-6 space-y-5">
@@ -241,10 +241,10 @@ export function DashboardWorkspace({
             </div>
           </section>
 
-          <section className="border-y border-[#dce5de] bg-white px-5 py-6 sm:px-7">
+          <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
             <div>
               <h2 className="font-semibold">{monthLabel(selectedMonth)}現金流</h2>
-              <p className="mt-1 text-xs text-[#829088]">收入與支出比較</p>
+              <p className="mt-1 text-xs text-[#8C827A]">收入與支出比較</p>
             </div>
             <div className="mt-6 space-y-5">
               <CashFlowLine

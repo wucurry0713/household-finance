@@ -3,7 +3,7 @@ export default function Loading() {
     <main
       aria-busy="true"
       aria-label="正在載入財務資料"
-      className="min-h-screen bg-[#f4f7f3] px-4 py-12 sm:px-8"
+      className="min-h-screen bg-[#FBF9F5] px-4 py-12 sm:px-8"
     >
       <div className="mx-auto max-w-6xl animate-pulse space-y-8">
         <div className="h-14 rounded-xl bg-white" />

@@ -217,7 +217,7 @@ export function QuickTransactionModal({
       {!initialTransaction && (
         <button
           aria-label="快速記帳"
-          className="fixed bottom-6 right-5 z-30 flex h-14 items-center gap-2 rounded-full bg-[#1d6048] px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(24,57,47,0.24)] transition hover:-translate-y-0.5 hover:bg-[#164c39] sm:bottom-8 sm:right-8"
+          className="fixed bottom-6 right-5 z-30 flex h-14 items-center gap-2 rounded-full bg-[#B8976C] px-5 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(24,57,47,0.24)] transition hover:-translate-y-0.5 hover:bg-[#A3835B] sm:bottom-8 sm:right-8"
           onClick={openModal}
           title="快速記帳"
           type="button"
@@ -237,20 +237,20 @@ export function QuickTransactionModal({
           <section
             aria-labelledby="quick-transaction-title"
             aria-modal="true"
-            className="max-h-[94dvh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-[#f8faf7] px-5 pb-6 pt-4 shadow-2xl sm:rounded-2xl sm:px-7 sm:pb-7"
+            className="max-h-[94dvh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-white px-5 pb-6 pt-4 shadow-2xl sm:rounded-2xl sm:px-7 sm:pb-7"
             role="dialog"
           >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#d5dfd8] sm:hidden" />
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#EFECE6] sm:hidden" />
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-[#6b7d73]">家庭帳本</p>
+                <p className="text-xs font-medium text-[#8C827A]">家庭帳本</p>
                 <h2 id="quick-transaction-title" className="mt-1 text-xl font-semibold">
                   {initialTransaction ? "編輯交易" : "快速記帳"}
                 </h2>
               </div>
               <button
                 aria-label="關閉"
-                className="grid size-10 place-items-center rounded-full text-[#63756c] hover:bg-[#eaf0eb]"
+                className="grid size-10 place-items-center rounded-full text-[#8C827A] hover:bg-[#E8DEC9]"
                 onClick={closeModal}
                 title="關閉"
                 type="button"
@@ -259,14 +259,14 @@ export function QuickTransactionModal({
               </button>
             </div>
 
-            <div className="mt-6 grid grid-cols-3 rounded-lg bg-[#eaf0eb] p-1">
+            <div className="mt-6 grid grid-cols-3 rounded-lg bg-[#E8DEC9] p-1">
               {transactionKinds.map(({ kind: option, label, icon: Icon }) => (
                 <button
                   aria-pressed={kind === option}
                   className={`flex h-10 items-center justify-center gap-1.5 rounded-md text-sm font-medium transition ${
                     kind === option
-                      ? "bg-white text-[#1d6048] shadow-sm"
-                      : "text-[#65766d] hover:text-[#18392f]"
+                      ? "bg-[#B8976C] text-white shadow-sm"
+                      : "text-[#8C827A] hover:text-[#2C2623]"
                   }`}
                   key={option}
                   onClick={() => {
@@ -290,15 +290,15 @@ export function QuickTransactionModal({
               <input name="kind" type="hidden" value={kind} />
               <input name="category_id" type="hidden" value={categoryId} />
 
-              <label className="block rounded-xl border border-[#dce5de] bg-white px-4 py-3">
-                <span className="text-xs font-medium text-[#728178]">
+              <label className="block rounded-xl border border-[#EFECE6] bg-white px-4 py-3">
+                <span className="text-xs font-medium text-[#8C827A]">
                   金額 · {selectedAccount?.currency ?? accounts[0]?.currency ?? "TWD"}
                 </span>
                 <span className="mt-1 flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-[#789087]">$</span>
+                  <span className="text-2xl font-semibold text-[#8C827A]">$</span>
                   <input
                     autoFocus
-                    className="min-w-0 flex-1 border-0 bg-transparent p-0 text-4xl font-semibold tracking-tight text-[#18392f] outline-none placeholder:text-[#bdc8c0] focus:ring-0"
+                    className="min-w-0 flex-1 border-0 bg-transparent p-0 text-4xl font-semibold tracking-tight text-[#2C2623] outline-none placeholder:text-[#EFECE6] focus:ring-0"
                     inputMode="decimal"
                     max="1000000000000"
                     min="0.01"
@@ -317,7 +317,7 @@ export function QuickTransactionModal({
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-sm font-medium">分類</p>
-                    <span className="text-xs text-[#78877f]">可略過</span>
+                    <span className="text-xs text-[#8C827A]">可略過</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                     {displayCategories.map(({ category, fallbackName }) => {
@@ -331,8 +331,8 @@ export function QuickTransactionModal({
                           aria-pressed={selected}
                           className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs transition ${
                             selected
-                              ? "border-[#4e8d6e] bg-[#eaf4ed] text-[#1d6048]"
-                              : "border-[#e0e7e1] bg-white text-[#66776e] hover:border-[#afc8b6]"
+                              ? "border-[#B8976C] bg-[#B8976C] text-white"
+                              : "border-[#EFECE6] bg-white text-[#8C827A] hover:border-[#D4C3A3]"
                           }`}
                           key={category?.id ?? `fallback-${name}`}
                           onClick={() => {
@@ -353,15 +353,15 @@ export function QuickTransactionModal({
                     })}
                   </div>
                   {fallbackCategoryOptions.length > 0 && (
-                    <p className="mt-2 text-xs text-[#78877f]">儲存時會自動加入家庭分類。</p>
+                    <p className="mt-2 text-xs text-[#8C827A]">儲存時會自動加入家庭分類。</p>
                   )}
                 </div>
               ) : null}
 
-              <div className="border-t border-[#e2e9e3] pt-3">
+              <div className="border-t border-[#EFECE6] pt-3">
                 <button
                   aria-expanded={showMoreOptions}
-                  className="text-sm font-medium text-[#557167] underline decoration-[#bdcdc0] underline-offset-4 hover:text-[#1d6048]"
+                  className="text-sm font-medium text-[#8C827A] underline decoration-[#EFECE6] underline-offset-4 hover:text-[#6B573F]"
                   onClick={() => setShowMoreOptions((shown) => !shown)}
                   type="button"
                 >
@@ -375,7 +375,7 @@ export function QuickTransactionModal({
                         {kind === "income" ? "入帳帳戶" : kind === "transfer" ? "轉出帳戶" : "扣款帳戶"}
                       </span>
                       <select
-                        className="h-11 w-full rounded-lg border border-[#d6dfd9] bg-white px-3 text-sm outline-none focus:border-[#237457] focus:ring-2 focus:ring-[#237457]/15"
+                        className="h-11 w-full rounded-lg border border-[#EFECE6] bg-white px-3 text-sm outline-none focus:border-[#B8976C] focus:ring-2 focus:ring-[#B8976C]/15"
                         name="account_id"
                         onChange={(event) => setAccountId(event.target.value)}
                         required
@@ -394,7 +394,7 @@ export function QuickTransactionModal({
                   <label className="block">
                     <span className="mb-2 block text-sm font-medium">轉入帳戶</span>
                     <select
-                      className="h-11 w-full rounded-lg border border-[#d6dfd9] bg-white px-3 text-sm outline-none focus:border-[#237457] focus:ring-2 focus:ring-[#237457]/15"
+                      className="h-11 w-full rounded-lg border border-[#EFECE6] bg-white px-3 text-sm outline-none focus:border-[#B8976C] focus:ring-2 focus:ring-[#B8976C]/15"
                       name="destination_account_id"
                       onChange={(event) => setDestinationAccountId(event.target.value)}
                       required
@@ -428,7 +428,7 @@ export function QuickTransactionModal({
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium">日期</span>
                   <input
-                    className="h-11 w-full rounded-lg border border-[#d6dfd9] bg-white px-3 text-sm outline-none focus:border-[#237457] focus:ring-2 focus:ring-[#237457]/15"
+                    className="h-11 w-full rounded-lg border border-[#EFECE6] bg-white px-3 text-sm outline-none focus:border-[#B8976C] focus:ring-2 focus:ring-[#B8976C]/15"
                     name="transaction_date"
                     onChange={(event) => setDate(event.target.value)}
                     required
@@ -439,7 +439,7 @@ export function QuickTransactionModal({
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium">備註</span>
                   <input
-                    className="h-11 w-full rounded-lg border border-[#d6dfd9] bg-white px-3 text-sm outline-none placeholder:text-[#a0ada5] focus:border-[#237457] focus:ring-2 focus:ring-[#237457]/15"
+                    className="h-11 w-full rounded-lg border border-[#EFECE6] bg-white px-3 text-sm outline-none placeholder:text-[#8C827A] focus:border-[#B8976C] focus:ring-2 focus:ring-[#B8976C]/15"
                     maxLength={200}
                     name="notes"
                     onChange={(event) => setNotes(event.target.value)}
@@ -458,7 +458,7 @@ export function QuickTransactionModal({
               <div className="grid gap-2 sm:grid-cols-2">
                 {!initialTransaction && (
                   <button
-                    className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#cddbd1] bg-white text-sm font-semibold text-[#285943] transition hover:bg-[#eff5ef] disabled:opacity-60"
+                    className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#EFECE6] bg-white text-sm font-semibold text-[#6B573F] transition hover:bg-[#E8DEC9] disabled:opacity-60"
                     disabled={isPending}
                     name="intent"
                     type="submit"
@@ -468,7 +468,7 @@ export function QuickTransactionModal({
                   </button>
                 )}
                 <button
-                  className="flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1d6048] text-sm font-semibold text-white transition hover:bg-[#164c39] disabled:opacity-60"
+                  className="flex h-11 items-center justify-center gap-2 rounded-lg bg-[#B8976C] text-sm font-semibold text-white transition hover:bg-[#A3835B] disabled:opacity-60"
                   disabled={isPending}
                   name="intent"
                   type="submit"

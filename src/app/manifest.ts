@@ -3,14 +3,14 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Tandem 家庭記帳與資產管理",
-    short_name: "Tandem",
+    name: "Ledgero 家庭記帳與資產管理",
+    short_name: "Ledgero",
     description: "一起管理家庭收支與資產。",
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#f4f7f3",
-    theme_color: "#18392f",
+    background_color: "#FBF9F5",
+    theme_color: "#B8976C",
     icons: [
       {
         src: "/pwa-icon-192.png",
