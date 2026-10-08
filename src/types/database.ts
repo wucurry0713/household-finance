@@ -156,6 +156,7 @@ export type Database = {
         {
           id: string;
           household_id: string | null;
+          parent_category_id: string | null;
           name: string;
           kind: "expense" | "income";
           icon: string | null;
@@ -167,6 +168,7 @@ export type Database = {
         {
           id?: string;
           household_id?: string | null;
+          parent_category_id?: string | null;
           name: string;
           kind: "expense" | "income";
           icon?: string | null;

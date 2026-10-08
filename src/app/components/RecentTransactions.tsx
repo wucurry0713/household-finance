@@ -18,6 +18,7 @@ import {
 import type { DashboardAccount, DashboardTransaction } from "@/lib/finance/dashboard";
 import type { Database } from "@/types/database";
 import { QuickTransactionModal } from "@/app/components/QuickTransactionModal";
+import { ExcelExportButton } from "@/app/components/ExcelExportButton";
 
 type Category = Database["public"]["Tables"]["categories"]["Row"];
 type ExportScope = "current_month" | "month" | "all";
@@ -164,6 +165,7 @@ export function RecentTransactions({
             <Download size={15} />
             {isExporting ? "準備中…" : "匯出 CSV"}
           </button>
+          <ExcelExportButton />
         </div>
       </div>
       {exportError && (

@@ -99,6 +99,9 @@ export function QuickTransactionModal({
   const action = initialTransaction ? updateTransactionAction : createTransactionAction;
   const visibleCategories =
     kind === "transfer" ? [] : categories.filter((category) => category.kind === kind);
+  const rootCategories = visibleCategories.filter(
+    (category) => category.parent_category_id === null,
+  );
   const availableAccounts = accounts.filter((account) => !account.is_archived);
   const suggestedAccount =
     availableAccounts.find((account) => account.id === defaultAccountId) ??
@@ -260,28 +263,43 @@ export function QuickTransactionModal({
                     <p className="text-sm font-medium">分類</p>
                     <span className="text-xs text-[#78877f]">可略過</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                    {visibleCategories.map((category) => {
-                      const Icon = getCategoryIcon(category.name);
-                      const selected = categoryId === category.id;
+                  <div className="space-y-4">
+                    {rootCategories.map((parent) => {
+                      const children = visibleCategories.filter(
+                        (category) => category.parent_category_id === parent.id,
+                      );
+                      const options = children.length ? children : [parent];
                       return (
-                        <button
-                          aria-pressed={selected}
-                          className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs transition ${
-                            selected
-                              ? "border-[#4e8d6e] bg-[#eaf4ed] text-[#1d6048]"
-                              : "border-[#e0e7e1] bg-white text-[#66776e] hover:border-[#afc8b6]"
-                          }`}
-                          key={category.id}
-                          onClick={() => setCategoryId(selected ? "" : category.id)}
-                          type="button"
-                        >
-                          <Icon size={17} />
-                          <span className="max-w-full truncate">{category.name}</span>
-                        </button>
+                        <div key={parent.id}>
+                          <h3 className="mb-2 text-xs font-semibold text-[#728178]">
+                            {children.length ? parent.name : "其他分類"}
+                          </h3>
+                          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                            {options.map((category) => {
+                              const Icon = getCategoryIcon(category.name);
+                              const selected = categoryId === category.id;
+                              return (
+                                <button
+                                  aria-pressed={selected}
+                                  className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs transition ${
+                                    selected
+                                      ? "border-[#4e8d6e] bg-[#eaf4ed] text-[#1d6048]"
+                                      : "border-[#e0e7e1] bg-white text-[#66776e] hover:border-[#afc8b6]"
+                                  }`}
+                                  key={category.id}
+                                  onClick={() => setCategoryId(selected ? "" : category.id)}
+                                  type="button"
+                                >
+                                  <Icon size={17} />
+                                  <span className="max-w-full truncate">{category.name}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       );
                     })}
-                    {!visibleCategories.length && (
+                    {!rootCategories.length && (
                       <p className="col-span-full rounded-lg border border-dashed border-[#d5dfd8] px-3 py-4 text-center text-xs text-[#78877f]">
                         尚無此類型分類，可先不指定分類記帳。
                       </p>
