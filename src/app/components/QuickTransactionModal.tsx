@@ -53,6 +53,26 @@ const transactionKinds: { kind: TransactionKind; label: string; icon: typeof Arr
   { kind: "transfer", label: "轉帳", icon: ArrowLeftRight },
 ];
 
+const EXPENSE_ORDER = [
+  "早餐",
+  "午餐",
+  "晚餐",
+  "交通",
+  "其他",
+  "家人",
+  "出國旅費",
+  "房貸",
+  "社交",
+  "電話費",
+  "保險",
+  "治裝費",
+  "日用品",
+  "醫療",
+  "稅務",
+];
+
+const INCOME_ORDER = ["薪水", "股息", "油資補貼", "股票贖回"];
+
 function getToday() {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -116,6 +136,25 @@ export function QuickTransactionModal({
       : defaultCategoryOptions[kind].filter(
           (name) => !visibleCategories.some((category) => category.name === name),
         );
+  const categoryOrder =
+    kind === "expense" ? EXPENSE_ORDER : kind === "income" ? INCOME_ORDER : [];
+  const displayCategories: {
+    category: Category | null;
+    fallbackName: string | null;
+  }[] = [
+    ...categoryOptions
+      .map((category) => ({ category, fallbackName: null })),
+    ...fallbackCategoryOptions
+      .map((name) => ({ category: null, fallbackName: name })),
+  ].sort((a, b) => {
+    const aName = a.category?.name ?? a.fallbackName ?? "";
+    const bName = b.category?.name ?? b.fallbackName ?? "";
+    const aIndex = categoryOrder.indexOf(aName);
+    const bIndex = categoryOrder.indexOf(bName);
+    const aOrder = aIndex === -1 ? categoryOrder.length : aIndex;
+    const bOrder = bIndex === -1 ? categoryOrder.length : bIndex;
+    return aOrder - bOrder;
+  });
   const availableAccounts = accounts.filter((account) => !account.is_archived);
   const suggestedAccount =
     availableAccounts.find((account) => account.id === defaultAccountId) ??
@@ -281,32 +320,12 @@ export function QuickTransactionModal({
                     <span className="text-xs text-[#78877f]">可略過</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                    {categoryOptions.map((category) => {
-                      const Icon = getCategoryIcon(category.name);
-                      const selected = categoryId === category.id;
-                      return (
-                        <button
-                          aria-pressed={selected}
-                          className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs transition ${
-                            selected
-                              ? "border-[#4e8d6e] bg-[#eaf4ed] text-[#1d6048]"
-                              : "border-[#e0e7e1] bg-white text-[#66776e] hover:border-[#afc8b6]"
-                          }`}
-                          key={category.id}
-                          onClick={() => {
-                            setCategoryId(selected ? "" : category.id);
-                            setFallbackCategory("");
-                          }}
-                          type="button"
-                        >
-                          <Icon size={17} />
-                          <span className="max-w-full truncate">{category.name}</span>
-                        </button>
-                      );
-                    })}
-                    {fallbackCategoryOptions.map((name) => {
+                    {displayCategories.map(({ category, fallbackName }) => {
+                      const name = category?.name ?? fallbackName ?? "";
                       const Icon = getCategoryIcon(name);
-                      const selected = fallbackCategory === name;
+                      const selected = category
+                        ? categoryId === category.id
+                        : fallbackCategory === name;
                       return (
                         <button
                           aria-pressed={selected}
@@ -315,10 +334,15 @@ export function QuickTransactionModal({
                               ? "border-[#4e8d6e] bg-[#eaf4ed] text-[#1d6048]"
                               : "border-[#e0e7e1] bg-white text-[#66776e] hover:border-[#afc8b6]"
                           }`}
-                          key={`fallback-${name}`}
+                          key={category?.id ?? `fallback-${name}`}
                           onClick={() => {
-                            setCategoryId("");
-                            setFallbackCategory(selected ? "" : name);
+                            if (category) {
+                              setCategoryId(selected ? "" : category.id);
+                              setFallbackCategory("");
+                            } else {
+                              setCategoryId("");
+                              setFallbackCategory(selected ? "" : name);
+                            }
                           }}
                           type="button"
                         >
