@@ -11,11 +11,6 @@ export async function loadAnalyticsTransactions(
   selectedMonth: string,
 ) {
   const since = monthDateRange(shiftMonthKey(selectedMonth, -11)).start;
-  const until = monthDateRange(selectedMonth).end;
-  try {
-    return await loadTransactionReportRows(supabase, householdId, since, until);
-  } catch (error) {
-    console.error("[analytics] Failed to load categories or transactions; using empty data", error);
-    return [];
-  }
+  const until = monthDateRange(shiftMonthKey(selectedMonth, 1)).start;
+  return loadTransactionReportRows(supabase, householdId, since, until);
 }

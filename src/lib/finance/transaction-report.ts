@@ -8,6 +8,11 @@ type FinanceClient = SupabaseClient<Database>;
 type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
 type EntryRow = Database["public"]["Tables"]["transaction_entries"]["Row"];
 type SplitRow = Database["public"]["Tables"]["transaction_splits"]["Row"];
+type CategoryLabel = {
+  id: string;
+  name: string;
+  parent_category_id?: string | null;
+};
 
 export type TransactionReportRow = {
   date: string;
@@ -50,7 +55,7 @@ async function loadAllTransactions(
       .order("transaction_date", { ascending: true })
       .order("created_at", { ascending: true });
     if (sinceDate) query = query.gte("transaction_date", sinceDate);
-    if (untilDate) query = query.lte("transaction_date", untilDate);
+    if (untilDate) query = query.lt("transaction_date", untilDate);
 
     const { data, error } = await query.range(offset, offset + pageSize - 1);
     if (error) throwQueryError("transactions", error);
@@ -74,7 +79,29 @@ export async function loadTransactionReportRows(
       .select("id, name, parent_category_id, kind, household_id")
       .or(`household_id.is.null,household_id.eq.${householdId}`),
   ]);
-  if (categoryResult.error) throwQueryError("categories", categoryResult.error);
+
+  let categoryRows: CategoryLabel[] = categoryResult.data ?? [];
+  let hasParentCategories = true;
+  if (categoryResult.error) {
+    console.error("[finance report] categories hierarchy query failed; retrying without parent categories", {
+      code: categoryResult.error.code,
+      message: categoryResult.error.message,
+    });
+    const fallbackResult = await supabase
+      .from("categories")
+      .select("id, name, kind, household_id")
+      .or(`household_id.is.null,household_id.eq.${householdId}`);
+    if (fallbackResult.error) {
+      console.error("[finance report] categories fallback query failed; transactions will be uncategorized", {
+        code: fallbackResult.error.code,
+        message: fallbackResult.error.message,
+      });
+      categoryRows = [];
+    } else {
+      categoryRows = fallbackResult.data ?? [];
+    }
+    hasParentCategories = false;
+  }
 
   const transactionIds = transactions.map((transaction) => transaction.id);
   const entries: EntryRow[] = [];
@@ -109,11 +136,11 @@ export async function loadTransactionReportRows(
     : { data: [], error: null };
   if (accountResult.error) throwQueryError("accounts", accountResult.error);
 
-  const categories = categoryResult.data ?? [];
+  const categories = categoryRows ?? [];
   const categoriesById = new Map(categories.map((category) => [category.id, category]));
   const categoryNames = new Map(
     categories.map((category) => {
-      const parent = category.parent_category_id
+      const parent = hasParentCategories && category.parent_category_id
         ? categoriesById.get(category.parent_category_id)
         : null;
       return [
