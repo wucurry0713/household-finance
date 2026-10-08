@@ -34,10 +34,10 @@ function formatMoney(amount: number, currency: string) {
     return new Intl.NumberFormat("zh-TW", {
       style: "currency",
       currency,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 0,
     }).format(amount);
   } catch {
-    return `${currency} ${amount.toLocaleString("zh-TW")}`;
+    return `${currency} ${Math.round(amount).toLocaleString("zh-TW")}`;
   }
 }
 

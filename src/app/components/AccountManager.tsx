@@ -12,7 +12,6 @@ import {
   Plus,
   RefreshCw,
   Save,
-  Star,
   Trash2,
   TrendingUp,
   X,
@@ -21,7 +20,6 @@ import {
 import {
   createAccountAction,
   deleteAccountAction,
-  setDefaultAccountAction,
   updateAccountAction,
   type AccountActionState,
 } from "@/app/actions/accounts";
@@ -69,10 +67,10 @@ function formatBalance(amount: number, currency: string) {
     return new Intl.NumberFormat("zh-TW", {
       style: "currency",
       currency,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 0,
     }).format(amount);
   } catch {
-    return `${currency} ${amount.toLocaleString("zh-TW")}`;
+    return `${currency} ${Math.round(amount).toLocaleString("zh-TW")}`;
   }
 }
 
@@ -430,9 +428,11 @@ function StockPortfolioManager({
 
 function AccountForm({
   account,
+  defaultAccountId,
   onClose,
 }: {
   account: DashboardAccount | null;
+  defaultAccountId: string | null;
   onClose: () => void;
 }) {
   const action = account ? updateAccountAction : createAccountAction;
@@ -535,6 +535,18 @@ function AccountForm({
             <span>設為家庭共同帳戶</span>
           </label>
 
+          {account && (
+            <label className="flex items-center gap-3 rounded-lg border border-[#EFECE6] bg-white px-3 py-3 text-sm">
+              <input
+                className="size-4 accent-[#B8976C]"
+                defaultChecked={defaultAccountId === account.id}
+                name="is_default_account"
+                type="checkbox"
+              />
+              <span>設為預設扣款帳戶</span>
+            </label>
+          )}
+
           {state.error && (
             <p aria-live="polite" className="rounded-lg bg-[#fff0ed] px-3 py-2.5 text-sm text-[#9f3e2e]" role="alert">
               {state.error}
@@ -573,42 +585,6 @@ function DeleteAccountForm({ accountId }: { accountId: string }) {
         <Archive aria-hidden="true" size={16} />
       </button>
     </form>
-  );
-}
-
-function SetDefaultAccountForm({
-  accountId,
-  isDefault,
-}: {
-  accountId: string;
-  isDefault: boolean;
-}) {
-  const [state, formAction, isPending] = useActionState(setDefaultAccountAction, initialState);
-  return (
-    <div className="shrink-0">
-      <form action={formAction}>
-        <input name="account_id" type="hidden" value={accountId} />
-        <button
-          aria-pressed={isDefault}
-          className={`flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium transition disabled:opacity-60 ${
-            isDefault
-              ? "bg-[#E8DEC9] text-[#6B573F]"
-              : "text-[#8C827A] hover:bg-[#E8DEC9] hover:text-[#6B573F]"
-          }`}
-          disabled={isPending || isDefault}
-          title={isDefault ? "目前預設扣款帳戶" : "設為預設扣款帳戶"}
-          type="submit"
-        >
-          <Star fill={isDefault ? "currentColor" : "none"} size={14} />
-          {isDefault ? "預設" : "設為預設"}
-        </button>
-      </form>
-      {state.error && (
-        <p aria-live="polite" className="mt-1 max-w-36 text-[11px] text-[#9f3e2e]" role="alert">
-          {state.error}
-        </p>
-      )}
-    </div>
   );
 }
 
@@ -723,7 +699,7 @@ export function AccountManager({
             const supportsStocks = ["investment", "stock", "securities"].includes(account.account_type);
             return (
               <Fragment key={account.id}>
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(160px,auto)] items-center gap-x-3 gap-y-2 py-3.5 sm:grid-cols-[minmax(0,1fr)_minmax(160px,auto)_auto]">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(112px,auto)_auto] items-center gap-x-3 gap-y-2 py-3.5 sm:grid-cols-[minmax(0,1fr)_minmax(160px,auto)_auto]">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEC9] text-[#6B573F]">
                       <AccountIcon type={account.account_type} />
@@ -736,15 +712,12 @@ export function AccountManager({
                       </div>
                     </div>
                   </div>
-                  <div className="ml-auto min-w-[160px] text-right font-mono tabular-nums">
+                  <div className="ml-auto min-w-[112px] text-right font-mono tabular-nums sm:min-w-[160px]">
                     <p className="break-words text-sm font-semibold text-[#2C2623]">
                       {formatBalance(account.balance, account.currency)}
                     </p>
-                    <p className="mt-1 break-words text-xs text-[#8C827A]">
-                      期初 {formatBalance(account.opening_balance, account.currency)}
-                    </p>
                   </div>
-                  <div className="col-span-2 flex items-center justify-end gap-1 sm:col-span-1 sm:ml-auto">
+                  <div className="flex items-center justify-end gap-1">
                     {supportsStocks && (
                       <button
                         aria-expanded={portfolioAccountId === account.id}
@@ -764,10 +737,6 @@ export function AccountManager({
                         股票明細
                       </button>
                     )}
-                    <SetDefaultAccountForm
-                      accountId={account.id}
-                      isDefault={defaultAccountId === account.id}
-                    />
                     <button
                       aria-label={`編輯 ${account.name}`}
                       className="rounded-md p-2 text-[#8C827A] transition hover:bg-[#E8DEC9] hover:text-[#6B573F]"
@@ -795,6 +764,7 @@ export function AccountManager({
       {(isCreating || editingAccount) && (
         <AccountForm
           account={editingAccount}
+          defaultAccountId={defaultAccountId}
           onClose={() => {
             setIsCreating(false);
             setEditingAccount(null);

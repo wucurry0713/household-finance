@@ -86,6 +86,7 @@ export async function updateAccountAction(
   if (!result.context) return failed(result.error);
 
   const { supabase, user, householdId } = result.context;
+  const shouldBeDefault = formData.get("is_default_account") === "on";
   const { error } = await supabase
     .from("accounts")
     .update({
@@ -108,6 +109,42 @@ export async function updateAccountAction(
       ...error,
     });
     return failed(accountWriteErrorMessage(error, fields.accountType));
+  }
+
+  revalidatePath("/");
+  const { data: preferences, error: preferencesError } = await supabase
+    .from("household_preferences")
+    .select("default_account_id")
+    .eq("household_id", householdId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (preferencesError) {
+    console.error("[accounts] Default account preference lookup failed", {
+      accountId,
+      ...preferencesError,
+    });
+    return failed(`帳戶已更新，但讀取預設帳戶設定失敗：${preferencesError.message}`);
+  }
+
+  if (shouldBeDefault || preferences?.default_account_id === accountId) {
+    const { error: preferenceWriteError } = await supabase
+      .from("household_preferences")
+      .upsert(
+        {
+          household_id: householdId,
+          user_id: user.id,
+          default_account_id: shouldBeDefault ? accountId : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "household_id,user_id" },
+      );
+    if (preferenceWriteError) {
+      console.error("[accounts] Default account preference update failed", {
+        accountId,
+        ...preferenceWriteError,
+      });
+      return failed(`帳戶已更新，但預設帳戶設定失敗：${preferenceWriteError.message}`);
+    }
   }
 
   revalidatePath("/");
