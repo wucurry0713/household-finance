@@ -19,6 +19,10 @@ export const defaultCategoryOptions: Record<CategoryKind, readonly string[]> = {
     "醫療",
     "稅務",
     "其他",
+    "水費 💧",
+    "電費 ⚡",
+    "天然氣費 🔥",
+    "管理費 🏢",
   ],
   income: ["薪水", "股息", "油資補貼", "股票贖回"],
 };

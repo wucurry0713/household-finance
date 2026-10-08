@@ -162,6 +162,64 @@ export async function refreshInvestment(id: string, accountId: string) {
   return { error: null };
 }
 
+export async function refreshAllInvestments() {
+  const result = await getFinanceContext();
+  if (!result.context) return { error: result.error, refreshed: 0, failed: [] as string[] };
+
+  const { supabase } = result.context;
+  const { data: investments, error: readError } = await supabase
+    .from("investments")
+    .select("id, account_id, symbol");
+  if (readError) {
+    console.error("[investments] Load all for refresh failed", readError);
+    return { error: `讀取股票持倉失敗：${readError.message}`, refreshed: 0, failed: [] as string[] };
+  }
+
+  let refreshed = 0;
+  const failed: string[] = [];
+  for (let index = 0; index < (investments ?? []).length; index += 3) {
+    const batch = (investments ?? []).slice(index, index + 3);
+    await Promise.all(
+      batch.map(async (investment) => {
+        try {
+          const quote = await getStockQuote(investment.symbol);
+          const { error } = await supabase
+            .from("investments")
+            .update({
+              current_price: quote.price,
+              currency: quote.currency,
+              exchange_rate: quote.usdTwd,
+              updated_at: quote.updatedAt,
+            })
+            .eq("id", investment.id)
+            .eq("account_id", investment.account_id);
+          if (error) {
+            console.error("[investments] Bulk quote update failed", {
+              symbol: investment.symbol,
+              ...error,
+            });
+            failed.push(investment.symbol);
+            return;
+          }
+          refreshed += 1;
+        } catch (error) {
+          console.error("[investments] Bulk quote refresh failed", {
+            symbol: investment.symbol,
+            error,
+          });
+          failed.push(investment.symbol);
+        }
+      }),
+    );
+  }
+
+  if (refreshed > 0) {
+    revalidatePath("/");
+    revalidatePath("/analytics");
+  }
+  return { error: null, refreshed, failed };
+}
+
 export async function deleteInvestment(id: string, accountId: string) {
   if (!id || !accountId) return { error: "缺少持倉或帳戶 ID。" };
   const authorized = await getAuthorizedInvestmentAccount(accountId);

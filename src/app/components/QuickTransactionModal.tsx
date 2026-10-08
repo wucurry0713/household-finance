@@ -1,13 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   ArrowDownLeft,
   ArrowLeftRight,
   ArrowUpRight,
   ArrowRight,
+  Building2,
   Bus,
   Coffee,
+  Flame,
   Film,
   HeartPulse,
   House,
@@ -15,9 +18,13 @@ import {
   ShoppingBasket,
   Utensils,
   Wallet,
+  Droplets,
+  Zap,
   X,
+  type LucideIcon,
 } from "lucide-react";
 
+import { createCustomExpenseCategory } from "@/app/actions/categories";
 import {
   createTransactionAction,
   updateTransactionAction,
@@ -69,16 +76,35 @@ const EXPENSE_ORDER = [
   "日用品",
   "醫療",
   "稅務",
+  "水費 💧",
+  "電費 ⚡",
+  "天然氣費 🔥",
+  "管理費 🏢",
 ];
 
 const INCOME_ORDER = ["薪水", "股息", "油資補貼", "股票贖回"];
+
+const customCategoryIcons: { key: string; label: string; icon: LucideIcon }[] = [
+  { key: "wallet", label: "帳務", icon: Wallet },
+  { key: "utensils", label: "餐飲", icon: Utensils },
+  { key: "bus", label: "交通", icon: Bus },
+  { key: "house", label: "居家", icon: House },
+  { key: "shopping", label: "購物", icon: ShoppingBasket },
+  { key: "health", label: "健康", icon: HeartPulse },
+];
 
 function getToday() {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function getCategoryIcon(name: string) {
+function getCategoryIcon(name: string, icon?: string | null) {
+  const customIcon = customCategoryIcons.find((item) => item.key === icon)?.icon;
+  if (customIcon) return customIcon;
+  if (/水費/.test(name)) return Droplets;
+  if (/電費/.test(name)) return Zap;
+  if (/天然氣/.test(name)) return Flame;
+  if (/管理費/.test(name)) return Building2;
   if (/餐|飲食|咖啡/.test(name)) return Utensils;
   if (/超商|便利/.test(name)) return Coffee;
   if (/交通|通勤/.test(name)) return Bus;
@@ -102,6 +128,7 @@ export function QuickTransactionModal({
   initialTransaction?: EditableTransaction | null;
   onClose?: () => void;
 }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(Boolean(initialTransaction));
   const [kind, setKind] = useState<TransactionKind>(initialTransaction?.kind ?? "expense");
   const [amount, setAmount] = useState(initialTransaction ? String(initialTransaction.amount) : "");
@@ -118,6 +145,11 @@ export function QuickTransactionModal({
   const [notes, setNotes] = useState(initialTransaction?.notes ?? "");
   const [state, setState] = useState(initialState);
   const [isPending, startTransition] = useTransition();
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState("");
+  const [customCategoryIcon, setCustomCategoryIcon] = useState("wallet");
+  const [customCategoryError, setCustomCategoryError] = useState<string | null>(null);
+  const [isSavingCustomCategory, setIsSavingCustomCategory] = useState(false);
   const action = initialTransaction ? updateTransactionAction : createTransactionAction;
   const visibleCategories =
     kind === "transfer" ? [] : categories.filter((category) => category.kind === kind);
@@ -210,6 +242,29 @@ export function QuickTransactionModal({
 
   function openModal() {
     if (!initialTransaction) setIsOpen(true);
+  }
+
+  async function saveCustomCategory(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSavingCustomCategory(true);
+    setCustomCategoryError(null);
+    try {
+      const result = await createCustomExpenseCategory({
+        name: customCategoryName,
+        icon: customCategoryIcon,
+      });
+      if (result.error || !result.category) {
+        setCustomCategoryError(result.error ?? "新增分類失敗。");
+        return;
+      }
+      setCategoryId(result.category.id);
+      setFallbackCategory("");
+      setCustomCategoryName("");
+      setShowCustomCategory(false);
+      router.refresh();
+    } finally {
+      setIsSavingCustomCategory(false);
+    }
   }
 
   return (
@@ -322,7 +377,7 @@ export function QuickTransactionModal({
                   <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                     {displayCategories.map(({ category, fallbackName }) => {
                       const name = category?.name ?? fallbackName ?? "";
-                      const Icon = getCategoryIcon(name);
+                      const Icon = getCategoryIcon(name, category?.icon);
                       const selected = category
                         ? categoryId === category.id
                         : fallbackCategory === name;
@@ -351,6 +406,19 @@ export function QuickTransactionModal({
                         </button>
                       );
                     })}
+                    {kind === "expense" && (
+                      <button
+                        className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[#D4C3A3] bg-white px-2 py-2 text-xs font-medium text-[#6B573F] transition hover:bg-[#E8DEC9]"
+                        onClick={() => {
+                          setCustomCategoryError(null);
+                          setShowCustomCategory(true);
+                        }}
+                        type="button"
+                      >
+                        <Plus size={17} />
+                        <span>自訂分類</span>
+                      </button>
+                    )}
                   </div>
                   {fallbackCategoryOptions.length > 0 && (
                     <p className="mt-2 text-xs text-[#8C827A]">儲存時會自動加入家庭分類。</p>
@@ -479,6 +547,77 @@ export function QuickTransactionModal({
                 </button>
               </div>
             </form>
+            {showCustomCategory && kind === "expense" && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#2C2623]/35 p-4">
+                <section
+                  aria-labelledby="custom-category-title"
+                  aria-modal="true"
+                  className="w-full max-w-sm rounded-2xl border border-[#EFECE6] bg-white p-5 shadow-xl"
+                  role="dialog"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold" id="custom-category-title">新增支出分類</h3>
+                    <button
+                      aria-label="關閉自訂分類"
+                      className="grid size-9 place-items-center rounded-full text-[#8C827A] hover:bg-[#E8DEC9]"
+                      onClick={() => setShowCustomCategory(false)}
+                      type="button"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <form className="mt-4 space-y-4" onSubmit={saveCustomCategory}>
+                    <label className="block text-sm font-medium">
+                      分類名稱
+                      <input
+                        autoFocus
+                        className="mt-1.5 h-11 w-full rounded-lg border border-[#EFECE6] px-3 text-sm outline-none focus:border-[#B8976C]"
+                        maxLength={40}
+                        onChange={(event) => setCustomCategoryName(event.target.value)}
+                        placeholder="例如：寵物用品"
+                        required
+                        value={customCategoryName}
+                      />
+                    </label>
+                    <fieldset>
+                      <legend className="text-sm font-medium">選擇圖示</legend>
+                      <div className="mt-2 grid grid-cols-6 gap-2">
+                        {customCategoryIcons.map(({ key, label, icon: CategoryIcon }) => {
+                          return (
+                            <button
+                              aria-label={`選擇${label}圖示`}
+                              aria-pressed={customCategoryIcon === key}
+                              className={`grid size-10 place-items-center rounded-lg border ${
+                                customCategoryIcon === key
+                                  ? "border-[#B8976C] bg-[#E8DEC9] text-[#6B573F]"
+                                  : "border-[#EFECE6] text-[#8C827A]"
+                              }`}
+                              key={key}
+                              onClick={() => setCustomCategoryIcon(key)}
+                              type="button"
+                            >
+                              <CategoryIcon size={18} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                    {customCategoryError && (
+                      <p aria-live="polite" className="text-sm text-[#9f3e2e]" role="alert">
+                        {customCategoryError}
+                      </p>
+                    )}
+                    <button
+                      className="h-11 w-full rounded-lg bg-[#B8976C] text-sm font-semibold text-white hover:bg-[#A3835B] disabled:opacity-60"
+                      disabled={isSavingCustomCategory}
+                      type="submit"
+                    >
+                      {isSavingCustomCategory ? "儲存中…" : "儲存並選取分類"}
+                    </button>
+                  </form>
+                </section>
+              </div>
+            )}
           </section>
         </div>
       )}

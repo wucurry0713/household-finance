@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { MailPlus, UserRound, Users } from "lucide-react";
+import { ChevronDown, MailPlus, UserRound, Users } from "lucide-react";
 
 import {
   inviteHouseholdMemberAction,
@@ -26,18 +26,26 @@ export function HouseholdMembersPanel({
   );
 
   return (
-    <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
-      <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEC9] text-[#6B573F]">
-          <Users size={19} />
+    <details className="group border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEC9] text-[#6B573F]">
+            <Users size={19} />
+          </span>
+          <span>
+            <span className="block font-semibold">家庭成員</span>
+            <span className="mt-1 block text-sm text-[#8C827A]">家庭資料由成員共同管理</span>
+          </span>
         </span>
-        <div>
-          <h2 className="font-semibold">家庭成員</h2>
-          <p className="mt-1 text-sm text-[#8C827A]">家庭資料由成員共同管理</p>
-        </div>
-      </div>
+        <ChevronDown
+          aria-hidden="true"
+          className="shrink-0 text-[#8C827A] transition-transform group-open:rotate-180"
+          size={18}
+        />
+      </summary>
 
-      <div className="mt-5 space-y-3">
+      <div className="pt-5">
+      <div className="space-y-3">
         {members.map((member) => (
           <div className="flex items-center gap-3" key={member.userId}>
             <span className="grid size-9 place-items-center rounded-full bg-[#E8DEC9] text-[#8C827A]">
@@ -112,6 +120,7 @@ export function HouseholdMembersPanel({
           </p>
         )}
       </form>
-    </section>
+      </div>
+    </details>
   );
 }

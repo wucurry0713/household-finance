@@ -27,6 +27,7 @@ import {
 import {
   createInvestment,
   deleteInvestment,
+  refreshAllInvestments,
   refreshInvestment,
   updateInvestment,
   type InvestmentRow,
@@ -240,17 +241,17 @@ function StockPortfolioManager({
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-lg bg-white p-3">
           <p className="text-xs text-[#8C827A]">目前市值</p>
-          <p className="mt-1 break-words text-sm font-semibold">{formatBalance(portfolio.value, account.currency)}</p>
+          <p className="mt-1 break-words text-right font-mono text-sm font-semibold tabular-nums">{formatBalance(portfolio.value, account.currency)}</p>
         </div>
         <div className="rounded-lg bg-white p-3">
           <p className="text-xs text-[#8C827A]">未實現損益</p>
-          <p className={`mt-1 break-words text-sm font-semibold ${profit < 0 ? "text-[#a05b48]" : "text-[#6B573F]"}`}>
+          <p className={`mt-1 break-words text-right font-mono text-sm font-semibold tabular-nums ${profit < 0 ? "text-[#a05b48]" : "text-[#6B573F]"}`}>
             {formatBalance(profit, account.currency)}
           </p>
         </div>
         <div className="rounded-lg bg-white p-3">
           <p className="text-xs text-[#8C827A]">整體報酬率</p>
-          <p className={`mt-1 text-sm font-semibold ${profit < 0 ? "text-[#a05b48]" : "text-[#6B573F]"}`}>
+          <p className={`mt-1 text-right font-mono text-sm font-semibold tabular-nums ${profit < 0 ? "text-[#a05b48]" : "text-[#6B573F]"}`}>
             {returnRate.toFixed(2)}%
           </p>
         </div>
@@ -285,17 +286,17 @@ function StockPortfolioManager({
                     <p className="break-words text-sm font-semibold">
                       {investment.name} <span className="text-xs font-normal text-[#8C827A]">{investment.symbol}</span>
                     </p>
-                    <p className="mt-1 text-xs text-[#8C827A]">
+                    <p className="mt-1 text-right font-mono text-xs tabular-nums text-[#8C827A]">
                       {shares.toLocaleString("zh-TW")} 股 · 現價{" "}
                       {formatBalance(currentPrice, investment.currency)}
                     </p>
-                    <p className="mt-1 text-xs text-[#8C827A]">
+                    <p className="mt-1 text-right font-mono text-xs tabular-nums text-[#8C827A]">
                       持倉市值 {formatBalance(marketValue, investment.currency)}
                       {investment.currency === "USD" && (
                         <> · 約 {formatBalance(marketValueTwd, "TWD")}</>
                       )}
                     </p>
-                    <p className={`mt-1 text-xs font-medium ${pnlInAccountCurrency < 0 ? "text-[#a05b48]" : "text-[#6B573F]"}`}>
+                    <p className={`mt-1 text-right font-mono text-xs font-medium tabular-nums ${pnlInAccountCurrency < 0 ? "text-[#a05b48]" : "text-[#6B573F]"}`}>
                       未實現損益 {formatBalance(pnlInAccountCurrency, account.currency)} ·{" "}
                       {positionReturn.toFixed(2)}%
                     </p>
@@ -619,29 +620,71 @@ export function AccountManager({
   defaultAccountId: string | null;
   investments: InvestmentRow[];
 }) {
+  const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [editingAccount, setEditingAccount] = useState<DashboardAccount | null>(null);
   const [portfolioAccountId, setPortfolioAccountId] = useState<string | null>(null);
+  const [refreshingAll, setRefreshingAll] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+
+  const handleRefreshAll = async () => {
+    setRefreshingAll(true);
+    setRefreshMessage(null);
+    try {
+      const result = await refreshAllInvestments();
+      if (result.error) {
+        setRefreshMessage(result.error);
+        return;
+      }
+      const failures = result.failed.length
+        ? `；失敗：${result.failed.join("、")}`
+        : "";
+      setRefreshMessage(`已更新 ${result.refreshed} 檔證券${failures}`);
+      if (result.refreshed > 0) router.refresh();
+    } catch (error) {
+      setRefreshMessage(error instanceof Error ? error.message : "更新證券股價失敗。");
+    } finally {
+      setRefreshingAll(false);
+    }
+  };
 
   return (
     <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-semibold">家庭帳戶</h2>
           <p className="mt-1 text-sm text-[#8C827A]">現金、銀行與信用卡帳戶</p>
         </div>
-        <button
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-[#EFECE6] px-3 text-sm font-semibold text-[#6B573F] transition hover:bg-[#E8DEC9]"
-          onClick={() => setIsCreating(true)}
-          type="button"
-        >
-          <Plus size={17} />
-          新增帳戶
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {investments.length > 0 && (
+            <button
+              className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-[#B8976C] px-3 text-sm font-semibold text-white transition hover:bg-[#A3835B] disabled:cursor-wait disabled:opacity-60"
+              disabled={refreshingAll}
+              onClick={() => void handleRefreshAll()}
+              type="button"
+            >
+              <RefreshCw className={refreshingAll ? "animate-spin" : ""} size={16} />
+              {refreshingAll ? "更新中…" : "更新所有證券股價"}
+            </button>
+          )}
+          <button
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-[#EFECE6] px-3 text-sm font-semibold text-[#6B573F] transition hover:bg-[#E8DEC9]"
+            onClick={() => setIsCreating(true)}
+            type="button"
+          >
+            <Plus size={17} />
+            新增帳戶
+          </button>
+        </div>
       </div>
+      {refreshMessage && (
+        <p aria-live="polite" className="mt-3 text-xs text-[#8C827A]" role="status">
+          {refreshMessage}
+        </p>
+      )}
 
       {accounts.length ? (
-        <div className="mt-5 divide-y divide-[#E8DEC9]">
+        <div className="ledgero-scrollbar mt-5 max-h-[400px] overflow-y-auto overscroll-contain divide-y divide-[#E8DEC9]">
           {accounts.map((account) => {
             const supportsStocks = ["investment", "stock", "securities"].includes(account.account_type);
             return (
@@ -657,12 +700,12 @@ export function AccountManager({
                         <span className="text-xs text-[#8C827A]">{accountTypeLabels[account.account_type]}</span>
                         {!account.is_shared && <span className="text-xs text-[#8C827A]">個人</span>}
                       </div>
-                      <p className="mt-1 text-xs text-[#8C827A]">
+                      <p className="mt-1 text-right font-mono text-xs tabular-nums text-[#8C827A]">
                         期初 {formatBalance(account.opening_balance, account.currency)}
                       </p>
                     </div>
                   </div>
-                  <p className="min-w-0 max-w-32 text-right text-sm font-semibold text-[#2C2623] [overflow-wrap:anywhere] sm:max-w-none sm:whitespace-nowrap">
+                  <p className="min-w-0 max-w-32 text-right font-mono text-sm font-semibold tabular-nums text-[#2C2623] [overflow-wrap:anywhere] sm:max-w-none sm:whitespace-nowrap">
                     {formatBalance(account.balance, account.currency)}
                   </p>
                   <div className="col-span-2 flex items-center justify-end gap-1 sm:ml-auto">
