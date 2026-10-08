@@ -23,6 +23,7 @@ import {
   updateTransactionAction,
   type TransactionActionState,
 } from "@/app/actions/transactions";
+import { defaultCategoryOptions } from "@/lib/finance/default-categories";
 import type { DashboardAccount } from "@/lib/finance/dashboard";
 import type { Database } from "@/types/database";
 
@@ -89,6 +90,7 @@ export function QuickTransactionModal({
     initialTransaction?.destinationAccountId ?? "",
   );
   const [categoryId, setCategoryId] = useState(initialTransaction?.categoryId ?? "");
+  const [fallbackCategory, setFallbackCategory] = useState("");
   const [showMoreOptions, setShowMoreOptions] = useState(
     initialTransaction?.kind === "transfer",
   );
@@ -100,7 +102,7 @@ export function QuickTransactionModal({
   const visibleCategories =
     kind === "transfer" ? [] : categories.filter((category) => category.kind === kind);
   const rootCategories = visibleCategories.filter(
-    (category) => category.parent_category_id === null,
+    (category) => !category.parent_category_id,
   );
   const availableAccounts = accounts.filter((account) => !account.is_archived);
   const suggestedAccount =
@@ -133,6 +135,7 @@ export function QuickTransactionModal({
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const intent = submitter instanceof HTMLButtonElement ? submitter.value : "close";
     formData.set("intent", intent);
+    formData.set("fallback_category", fallbackCategory);
 
     startTransition(async () => {
       const result = await action(state, formData);
@@ -143,6 +146,7 @@ export function QuickTransactionModal({
         form.reset();
         setAmount("");
         setCategoryId("");
+        setFallbackCategory("");
         setNotes("");
         const today = getToday();
         setDate(today);
@@ -217,6 +221,7 @@ export function QuickTransactionModal({
                   onClick={() => {
                     setKind(option);
                     setCategoryId("");
+                    setFallbackCategory("");
                     setShowMoreOptions(option === "transfer");
                   }}
                   type="button"
@@ -287,7 +292,10 @@ export function QuickTransactionModal({
                                       : "border-[#e0e7e1] bg-white text-[#66776e] hover:border-[#afc8b6]"
                                   }`}
                                   key={category.id}
-                                  onClick={() => setCategoryId(selected ? "" : category.id)}
+                                  onClick={() => {
+                                    setCategoryId(selected ? "" : category.id);
+                                    setFallbackCategory("");
+                                  }}
                                   type="button"
                                 >
                                   <Icon size={17} />
@@ -300,9 +308,39 @@ export function QuickTransactionModal({
                       );
                     })}
                     {!rootCategories.length && (
-                      <p className="col-span-full rounded-lg border border-dashed border-[#d5dfd8] px-3 py-4 text-center text-xs text-[#78877f]">
-                        尚無此類型分類，可先不指定分類記帳。
-                      </p>
+                      <div>
+                        <h3 className="mb-2 text-xs font-semibold text-[#728178]">
+                          預設分類
+                        </h3>
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                          {defaultCategoryOptions[kind].map((name) => {
+                            const Icon = getCategoryIcon(name);
+                            const selected = fallbackCategory === name;
+                            return (
+                              <button
+                                aria-pressed={selected}
+                                className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs transition ${
+                                  selected
+                                    ? "border-[#4e8d6e] bg-[#eaf4ed] text-[#1d6048]"
+                                    : "border-[#e0e7e1] bg-white text-[#66776e] hover:border-[#afc8b6]"
+                                }`}
+                                key={name}
+                                onClick={() => {
+                                  setCategoryId("");
+                                  setFallbackCategory(selected ? "" : name);
+                                }}
+                                type="button"
+                              >
+                                <Icon size={17} />
+                                <span className="max-w-full truncate">{name}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="mt-2 text-xs text-[#78877f]">
+                          儲存時會自動加入家庭分類。
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>

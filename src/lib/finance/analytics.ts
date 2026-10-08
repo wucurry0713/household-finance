@@ -12,5 +12,10 @@ export async function loadAnalyticsTransactions(
   const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 12, 1))
     .toISOString()
     .slice(0, 10);
-  return loadTransactionReportRows(supabase, householdId, since);
+  try {
+    return await loadTransactionReportRows(supabase, householdId, since);
+  } catch (error) {
+    console.error("[analytics] Failed to load categories or transactions; using empty data", error);
+    return [];
+  }
 }

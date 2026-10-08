@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getFinanceContext } from "@/lib/finance/context";
+import { isDefaultCategoryOption } from "@/lib/finance/default-categories";
 import type { Database } from "@/types/database";
 
 export type TransactionActionState = {
@@ -18,6 +19,7 @@ type TransactionInput = {
   accountId: string;
   destinationAccountId: string | null;
   categoryId: string | null;
+  fallbackCategory: string | null;
   transactionDate: string;
   notes: string | null;
   currency: string;
@@ -36,6 +38,7 @@ function parseTransactionInput(formData: FormData):
   const accountId = String(formData.get("account_id") ?? "");
   const destinationAccountId = String(formData.get("destination_account_id") ?? "");
   const categoryId = String(formData.get("category_id") ?? "");
+  const fallbackCategory = String(formData.get("fallback_category") ?? "").trim();
   const transactionDate = String(formData.get("transaction_date") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
 
@@ -67,6 +70,12 @@ function parseTransactionInput(formData: FormData):
       accountId,
       destinationAccountId: kind === "transfer" ? destinationAccountId : null,
       categoryId: kind === "transfer" || !categoryId ? null : categoryId,
+      fallbackCategory:
+        kind !== "transfer" &&
+        !categoryId &&
+        isDefaultCategoryOption(kind, fallbackCategory)
+          ? fallbackCategory
+          : null,
       transactionDate,
       notes: notes || null,
       currency: "TWD",
@@ -113,6 +122,7 @@ async function validateAccounts(
 
 async function validateCategory(
   categoryId: string | null,
+  fallbackCategory: string | null,
   kind: TransactionKind,
   householdId: string,
   supabase: Awaited<ReturnType<typeof getFinanceContext>> extends { context: infer C }
@@ -121,7 +131,34 @@ async function validateCategory(
       : never
     : never,
 ) {
-  if (!categoryId || kind === "transfer") return { category: null, error: null };
+  if (kind === "transfer") return { category: null, error: null };
+
+  if (!categoryId && fallbackCategory) {
+    const { data: existing, error: findError } = await supabase
+      .from("categories")
+      .select("id, name")
+      .eq("household_id", householdId)
+      .eq("kind", kind)
+      .eq("name", fallbackCategory)
+      .maybeSingle();
+    if (findError) return { category: null, error: findError.message };
+    if (existing) return { category: existing, error: null };
+
+    const { data: created, error: createError } = await supabase
+      .from("categories")
+      .insert({
+        household_id: householdId,
+        name: fallbackCategory,
+        kind,
+        is_system: false,
+      })
+      .select("id, name")
+      .single();
+    if (createError) return { category: null, error: createError.message };
+    return { category: created, error: null };
+  }
+
+  if (!categoryId) return { category: null, error: null };
 
   const { data: category, error } = await supabase
     .from("categories")
@@ -220,6 +257,7 @@ async function resolveInput(
 
   const categoryCheck = await validateCategory(
     parsed.input.categoryId,
+    parsed.input.fallbackCategory,
     parsed.input.kind,
     householdId,
     supabase,
