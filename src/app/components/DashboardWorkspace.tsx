@@ -113,7 +113,9 @@ export function DashboardWorkspace({
   baseCurrency: string;
   selectedMonth: string;
 }) {
-  const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
+  const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(currentUserId);
+  const currentMember = dashboard.members.find((member) => member.userId === currentUserId);
+  const otherMembers = dashboard.members.filter((member) => member.userId !== currentUserId);
   const activeMember = selectedOwnerId
     ? dashboard.members.find((member) => member.userId === selectedOwnerId)
     : null;
@@ -151,6 +153,21 @@ export function DashboardWorkspace({
         className="mt-7 flex w-full gap-1 overflow-x-auto rounded-lg bg-[#E8DEC9] p-1 sm:w-fit"
         role="group"
       >
+        {currentMember && (
+          <button
+            aria-pressed={selectedOwnerId === currentMember.userId}
+            className={`flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${
+              selectedOwnerId === currentMember.userId
+                ? "bg-[#B8976C] text-white shadow-sm"
+                : "text-[#8C827A] hover:text-[#2C2623]"
+            }`}
+            onClick={() => setSelectedOwnerId(currentMember.userId)}
+            type="button"
+          >
+            <UserRound size={16} />
+            {currentMember.displayName}（我）
+          </button>
+        )}
         <button
           aria-pressed={selectedOwnerId === null}
           className={`flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${
@@ -164,7 +181,7 @@ export function DashboardWorkspace({
           <House size={16} />
           家庭總覽
         </button>
-        {dashboard.members.map((member) => (
+        {otherMembers.map((member) => (
           <button
             aria-pressed={selectedOwnerId === member.userId}
             className={`flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${
@@ -178,7 +195,7 @@ export function DashboardWorkspace({
           >
             <UserRound size={16} />
             {member.displayName}
-            {member.userId === currentUserId ? "（我）" : "（另一半）"}
+            （另一半）
           </button>
         ))}
       </div>
