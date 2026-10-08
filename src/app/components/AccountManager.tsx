@@ -259,8 +259,19 @@ function StockPortfolioManager({
       {investments.length ? (
         <div className="mt-4 divide-y divide-[#e6ece7]">
           {investments.map((investment) => {
-            const pnl = (Number(investment.current_price) - Number(investment.cost_price)) *
-              Number(investment.shares);
+            const shares = Number(investment.shares);
+            const currentPrice = Number(investment.current_price);
+            const costPrice = Number(investment.cost_price);
+            const marketValue = currentPrice * shares;
+            const costValue = costPrice * shares;
+            const pnl = marketValue - costValue;
+            const positionReturn = costValue > 0 ? (pnl / costValue) * 100 : 0;
+            const marketValueTwd = convertCurrency(
+              marketValue,
+              investment.currency,
+              "TWD",
+              Number(investment.exchange_rate),
+            );
             const pnlInAccountCurrency = convertCurrency(
               pnl,
               investment.currency,
@@ -275,11 +286,18 @@ function StockPortfolioManager({
                       {investment.name} <span className="text-xs font-normal text-[#718078]">{investment.symbol}</span>
                     </p>
                     <p className="mt-1 text-xs text-[#718078]">
-                      {Number(investment.shares).toLocaleString("zh-TW")} 股 · 現價{" "}
-                      {formatBalance(Number(investment.current_price), investment.currency)}
+                      {shares.toLocaleString("zh-TW")} 股 · 現價{" "}
+                      {formatBalance(currentPrice, investment.currency)}
+                    </p>
+                    <p className="mt-1 text-xs text-[#718078]">
+                      持倉市值 {formatBalance(marketValue, investment.currency)}
+                      {investment.currency === "USD" && (
+                        <> · 約 {formatBalance(marketValueTwd, "TWD")}</>
+                      )}
                     </p>
                     <p className={`mt-1 text-xs font-medium ${pnlInAccountCurrency < 0 ? "text-[#a05b48]" : "text-[#237457]"}`}>
-                      未實現損益 {formatBalance(pnlInAccountCurrency, account.currency)}
+                      未實現損益 {formatBalance(pnlInAccountCurrency, account.currency)} ·{" "}
+                      {positionReturn.toFixed(2)}%
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">

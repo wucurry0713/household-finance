@@ -45,27 +45,39 @@ async function fetchChart(symbol: string) {
   return result.meta;
 }
 
+async function fetchUsdTwdRate() {
+  try {
+    const quote = await fetchChart("USDTWD=X");
+    const rate = Number(quote.regularMarketPrice);
+    if (Number.isFinite(rate) && rate > 0) return rate;
+  } catch {
+    // Yahoo Finance's canonical symbol for USD/TWD is TWD=X.
+  }
+
+  const quote = await fetchChart("TWD=X");
+  const rate = Number(quote.regularMarketPrice);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    throw new Error("目前無法取得 USD/TWD 匯率。");
+  }
+  return rate;
+}
+
 export async function getStockQuote(inputSymbol: string): Promise<StockQuote> {
   const symbol = inputSymbol.trim().toUpperCase();
   if (!symbolPattern.test(symbol)) throw new Error("股票代號格式不正確。");
 
-  const [stock, fx] = await Promise.all([
+  const [stock, usdTwd] = await Promise.all([
     fetchChart(symbol),
-    fetchChart("TWD=X"),
+    fetchUsdTwdRate(),
   ]);
   const currency = stock.currency;
   if (currency !== "TWD" && currency !== "USD") {
     throw new Error(`目前不支援 ${currency ?? "未知"} 幣別的股票。`);
   }
-  const usdTwd = Number(fx.regularMarketPrice);
   const price = Number(stock.regularMarketPrice);
   if (!Number.isFinite(price) || price <= 0) {
     throw new Error("目前無法取得有效的最新股價。");
   }
-  if (!Number.isFinite(usdTwd) || usdTwd <= 0) {
-    throw new Error("目前無法取得 USD/TWD 匯率。");
-  }
-
   return {
     symbol: stock.symbol ?? symbol,
     name: stock.longName || stock.shortName || symbol,
