@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 
 import { AnalyticsWorkspace } from "@/app/components/AnalyticsWorkspace";
 import { AppHeader } from "@/app/components/AppHeader";
+import { MonthSelector } from "@/app/components/MonthSelector";
 import { loadAnalyticsTransactions } from "@/lib/finance/analytics";
 import { getFinanceContext } from "@/lib/finance/context";
+import { normalizeMonthKey } from "@/lib/finance/month";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,11 @@ export const metadata: Metadata = {
   title: "分析統計 | Tandem",
 };
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({
+  searchParams,
+}: PageProps<"/analytics">) {
+  const params = await searchParams;
+  const selectedMonth = normalizeMonthKey(params.month);
   const result = await getFinanceContext();
   if (!result.context) redirect("/login");
   const { supabase, householdId, user } = result.context;
@@ -34,7 +40,7 @@ export default async function AnalyticsPage() {
     console.error("[analytics] household query failed", householdError);
     throw new Error(`Household query failed: ${householdError.message}`);
   }
-  const transactions = await loadAnalyticsTransactions(supabase, householdId);
+  const transactions = await loadAnalyticsTransactions(supabase, householdId, selectedMonth);
   const displayName =
     profile?.display_name ||
     user.user_metadata.display_name ||
@@ -43,10 +49,12 @@ export default async function AnalyticsPage() {
 
   return (
     <main className="min-h-screen bg-[#f4f7f3] text-[#14251f]">
-      <AppHeader currentPage="analytics" displayName={displayName} />
+      <AppHeader currentPage="analytics" displayName={displayName} month={selectedMonth} />
       <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl sm:px-8 sm:py-14">
+        <MonthSelector month={selectedMonth} />
         <AnalyticsWorkspace
           currency={household.base_currency}
+          selectedMonth={selectedMonth}
           transactions={transactions}
         />
       </div>

@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ArrowDownLeft, ArrowUpRight, House, UserRound, Wallet } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowLeftRight,
+  ArrowUpRight,
+  House,
+  UserRound,
+  Wallet,
+} from "lucide-react";
 
 import { AccountManager } from "@/app/components/AccountManager";
 import { HouseholdMembersPanel } from "@/app/components/HouseholdMembersPanel";
 import { QuickTransactionModal } from "@/app/components/QuickTransactionModal";
 import { RecentTransactions } from "@/app/components/RecentTransactions";
 import type { DashboardData } from "@/lib/finance/dashboard";
+import { monthLabel } from "@/lib/finance/month";
 
 function formatMoney(amount: number, currency: string) {
   try {
@@ -96,12 +104,14 @@ export function DashboardWorkspace({
   displayName,
   householdName,
   baseCurrency,
+  selectedMonth,
 }: {
   currentUserId: string;
   dashboard: DashboardData;
   displayName: string;
   householdName: string;
   baseCurrency: string;
+  selectedMonth: string;
 }) {
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
   const activeMember = selectedOwnerId
@@ -173,7 +183,7 @@ export function DashboardWorkspace({
         ))}
       </div>
 
-      <section aria-label="家庭財務摘要" className="mt-6 grid gap-4 md:grid-cols-3">
+      <section aria-label="家庭財務摘要" className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryItem
           icon={<Wallet size={18} />}
           label="家庭淨資產"
@@ -181,13 +191,18 @@ export function DashboardWorkspace({
         />
         <SummaryItem
           icon={<ArrowDownLeft size={18} />}
-          label="本月收入"
+          label={`${monthLabel(selectedMonth)}收入`}
           value={formatMoney(totals.monthIncome, baseCurrency)}
         />
         <SummaryItem
           icon={<ArrowUpRight size={18} />}
-          label="本月支出"
+          label={`${monthLabel(selectedMonth)}支出`}
           value={formatMoney(totals.monthExpenses, baseCurrency)}
+        />
+        <SummaryItem
+          icon={<ArrowLeftRight size={18} />}
+          label={`${monthLabel(selectedMonth)}結餘`}
+          value={formatMoney(totals.monthBalance, baseCurrency)}
         />
       </section>
 
@@ -202,6 +217,7 @@ export function DashboardWorkspace({
             categories={dashboard.categories}
             transactions={visibleTransactions}
             viewOwnerId={selectedOwnerId}
+            monthLabel={monthLabel(selectedMonth)}
           />
         </div>
 
@@ -226,7 +242,7 @@ export function DashboardWorkspace({
 
           <section className="border-y border-[#dce5de] bg-white px-5 py-6 sm:px-7">
             <div>
-              <h2 className="font-semibold">本月現金流</h2>
+              <h2 className="font-semibold">{monthLabel(selectedMonth)}現金流</h2>
               <p className="mt-1 text-xs text-[#829088]">收入與支出比較</p>
             </div>
             <div className="mt-6 space-y-5">

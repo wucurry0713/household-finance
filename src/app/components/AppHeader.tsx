@@ -6,9 +6,11 @@ import { signOutAction } from "@/app/login/actions";
 export function AppHeader({
   displayName,
   currentPage,
+  month,
 }: {
   displayName: string;
   currentPage: "dashboard" | "analytics";
+  month: string;
 }) {
   return (
     <header className="border-b border-[#dce5de] bg-white pt-[env(safe-area-inset-top)]">
@@ -27,7 +29,7 @@ export function AppHeader({
                 ? "bg-[#edf5ef] text-[#1d6048]"
                 : "text-[#60736a] hover:bg-[#edf2ee]"
             }`}
-            href="/"
+            href={`/?month=${month}`}
           >
             總覽
           </Link>
@@ -38,7 +40,7 @@ export function AppHeader({
                 ? "bg-[#edf5ef] text-[#1d6048]"
                 : "text-[#60736a] hover:bg-[#edf2ee]"
             }`}
-            href="/analytics"
+            href={`/analytics?month=${month}`}
           >
             分析
           </Link>

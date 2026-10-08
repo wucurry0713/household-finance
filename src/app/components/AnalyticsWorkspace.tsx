@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, ChartPie, TrendingUp } from "lucide-react";
 
 import type { TransactionReportRow } from "@/lib/finance/transaction-report";
+import { monthLabel } from "@/lib/finance/month";
 
 type Metric = "expense" | "income" | "balance";
 type Period = "month" | "six_months" | "year";
@@ -46,13 +47,15 @@ function metricAmount(rows: TransactionReportRow[], metric: Metric) {
 export function AnalyticsWorkspace({
   transactions,
   currency,
+  selectedMonth,
 }: {
   transactions: TransactionReportRow[];
   currency: string;
+  selectedMonth: string;
 }) {
   const [metric, setMetric] = useState<Metric>("expense");
   const [period, setPeriod] = useState<Period>("month");
-  const currentMonth = monthKey(new Date());
+  const currentMonth = selectedMonth;
   const previousMonth = shiftMonth(currentMonth, -1);
   const firstMonth =
     period === "year"
@@ -182,13 +185,13 @@ export function AnalyticsWorkspace({
 
       <section className="grid gap-4 sm:grid-cols-2">
         <article className="border-l-2 border-[#b6d98c] bg-white px-5 py-5">
-          <p className="text-sm text-[#718078]">本月{metricLabels[metric]}</p>
+          <p className="text-sm text-[#718078]">{monthLabel(currentMonth)}{metricLabels[metric]}</p>
           <p className="mt-3 text-2xl font-semibold text-[#18392f]">
             {formatMoney(thisMonthAmount, currency)}
           </p>
           <p className="mt-2 flex items-center gap-1 text-xs text-[#718078]">
             {monthChange >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-            與上月相比 {monthChange >= 0 ? "增加" : "減少"}{" "}
+            與{monthLabel(previousMonth)}相比 {monthChange >= 0 ? "增加" : "減少"}{" "}
             {formatMoney(Math.abs(monthChange), currency)}
           </p>
         </article>

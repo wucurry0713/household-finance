@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database";
+import { monthDateRange } from "@/lib/finance/month";
 
 type AccountRow = Database["public"]["Tables"]["accounts"]["Row"];
 type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
@@ -47,6 +48,7 @@ export type DashboardTotals = {
   netWorth: number;
   monthIncome: number;
   monthExpenses: number;
+  monthBalance: number;
   accountAssets: number;
   otherAssets: number;
   investments: number;
@@ -91,23 +93,47 @@ function reportError(stage: string, error: { code?: string; message: string }) {
   });
 }
 
+async function loadMonthTransactions(
+  supabase: SupabaseClient<Database>,
+  householdId: string,
+  monthStart: string,
+  monthEnd: string,
+) {
+  const transactions: TransactionRow[] = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("household_id", householdId)
+      .gte("transaction_date", monthStart)
+      .lte("transaction_date", monthEnd)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    if (error) {
+      reportError("month transactions", error);
+      throw new Error(`Month transaction query failed: ${error.message}`);
+    }
+    transactions.push(...(data ?? []));
+    if (!data || data.length < pageSize) break;
+  }
+  return transactions;
+}
+
 export async function loadDashboardData(
   supabase: SupabaseClient<Database>,
   householdId: string,
   userId: string,
   baseCurrency: string,
+  selectedMonth: string,
 ): Promise<DashboardData> {
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-    .toISOString()
-    .slice(0, 10);
+  const { start: monthStart, end: monthEnd } = monthDateRange(selectedMonth);
 
   const [
     accountsResult,
     entriesResult,
-    monthTransactionsResult,
-    recentTransactionsResult,
+    monthTransactions,
     categoriesResult,
     assetsResult,
     valuationsResult,
@@ -127,20 +153,7 @@ export async function loadDashboardData(
       .from("transaction_entries")
       .select("*")
       .eq("household_id", householdId),
-    supabase
-      .from("transactions")
-      .select("id, kind, owner_id, is_joint")
-      .eq("household_id", householdId)
-      .gte("transaction_date", monthStart)
-      .lte("transaction_date", today),
-    supabase
-      .from("transactions")
-      .select("*")
-      .eq("household_id", householdId)
-      .in("kind", ["income", "expense", "transfer"])
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(8),
+    loadMonthTransactions(supabase, householdId, monthStart, monthEnd),
     supabase
       .from("categories")
       .select("*")
@@ -186,8 +199,6 @@ export async function loadDashboardData(
   const results = [
     ["accounts", accountsResult.error],
     ["transaction_entries", entriesResult.error],
-    ["month transactions", monthTransactionsResult.error],
-    ["recent transactions", recentTransactionsResult.error],
     ["categories", categoriesResult.error],
     ["assets", assetsResult.error],
     ["asset valuations", valuationsResult.error],
@@ -203,8 +214,11 @@ export async function loadDashboardData(
 
   const accounts = accountsResult.data ?? [];
   const entries = entriesResult.data ?? [];
-  const monthTransactions = monthTransactionsResult.data ?? [];
-  const recentTransactions = recentTransactionsResult.data ?? [];
+  const recentTransactions = monthTransactions.filter(
+    (transaction) => transaction.kind === "income" ||
+      transaction.kind === "expense" ||
+      transaction.kind === "transfer",
+  );
   const categories = categoriesResult.data ?? [];
   const assets = assetsResult.data ?? [];
   const valuations = valuationsResult.data ?? [];
@@ -388,6 +402,7 @@ export async function loadDashboardData(
     netWorth: accountAssets + otherAssets + investmentValue - liabilityValue,
     monthIncome,
     monthExpenses,
+    monthBalance: monthIncome - monthExpenses,
     accountAssets,
     otherAssets,
     investments: investmentValue,
@@ -455,6 +470,7 @@ export async function loadDashboardData(
         memberAccountAssets + memberOtherAssets + memberInvestments - memberLiabilities,
       monthIncome: memberMonthIncome,
       monthExpenses: memberMonthExpenses,
+      monthBalance: memberMonthIncome - memberMonthExpenses,
       accountAssets: memberAccountAssets,
       otherAssets: memberOtherAssets,
       investments: memberInvestments,

@@ -33,6 +33,7 @@ async function loadAllTransactions(
   supabase: FinanceClient,
   householdId: string,
   sinceDate?: string,
+  untilDate?: string,
 ) {
   const transactions: Pick<
     TransactionRow,
@@ -49,6 +50,7 @@ async function loadAllTransactions(
       .order("transaction_date", { ascending: true })
       .order("created_at", { ascending: true });
     if (sinceDate) query = query.gte("transaction_date", sinceDate);
+    if (untilDate) query = query.lte("transaction_date", untilDate);
 
     const { data, error } = await query.range(offset, offset + pageSize - 1);
     if (error) throwQueryError("transactions", error);
@@ -63,9 +65,10 @@ export async function loadTransactionReportRows(
   supabase: FinanceClient,
   householdId: string,
   sinceDate?: string,
+  untilDate?: string,
 ): Promise<TransactionReportRow[]> {
   const [transactions, categoryResult] = await Promise.all([
-    loadAllTransactions(supabase, householdId, sinceDate),
+    loadAllTransactions(supabase, householdId, sinceDate, untilDate),
     supabase
       .from("categories")
       .select("id, name, parent_category_id, kind, household_id")

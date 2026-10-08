@@ -69,11 +69,13 @@ export function RecentTransactions({
   categories,
   transactions,
   viewOwnerId,
+  monthLabel,
 }: {
   accounts: DashboardAccount[];
   categories: Category[];
   transactions: DashboardTransaction[];
   viewOwnerId?: string | null;
+  monthLabel: string;
 }) {
   const [editingTransaction, setEditingTransaction] = useState<DashboardTransaction | null>(null);
   const [exportScope, setExportScope] = useState<ExportScope>("current_month");
@@ -134,7 +136,7 @@ export function RecentTransactions({
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-xs font-medium text-[#718078]">家庭帳本</p>
-          <h2 className="mt-1 font-semibold">最近交易</h2>
+          <h2 className="mt-1 font-semibold">{monthLabel}交易明細</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
