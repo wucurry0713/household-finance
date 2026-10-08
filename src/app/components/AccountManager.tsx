@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Archive,
   Banknote,
+  ChevronDown,
   CreditCard,
   Landmark,
   Pencil,
@@ -626,6 +627,14 @@ export function AccountManager({
   const [portfolioAccountId, setPortfolioAccountId] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const totalsByCurrency = accounts.reduce<Record<string, number>>((totals, account) => {
+    totals[account.currency] = (totals[account.currency] ?? 0) + account.balance;
+    return totals;
+  }, {});
+  const accountTotalsLabel = Object.entries(totalsByCurrency)
+    .map(([currency, total]) => formatBalance(total, currency))
+    .join(" · ");
 
   const handleRefreshAll = async () => {
     setRefreshingAll(true);
@@ -651,11 +660,16 @@ export function AccountManager({
   return (
     <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="font-semibold">家庭帳戶</h2>
           <p className="mt-1 text-sm text-[#8C827A]">現金、銀行與信用卡帳戶</p>
+          {accountTotalsLabel && (
+            <p className="mt-2 break-words text-right font-mono text-sm font-semibold tabular-nums text-[#2C2623]">
+              合計 {accountTotalsLabel}
+            </p>
+          )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {investments.length > 0 && (
             <button
               className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-[#B8976C] px-3 text-sm font-semibold text-white transition hover:bg-[#A3835B] disabled:cursor-wait disabled:opacity-60"
@@ -675,6 +689,20 @@ export function AccountManager({
             <Plus size={17} />
             新增帳戶
           </button>
+          <button
+            aria-controls="household-account-list"
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? "收起家庭帳戶" : "展開家庭帳戶"}
+            className="grid size-10 shrink-0 place-items-center rounded-lg border border-[#EFECE6] text-[#6B573F] transition hover:bg-[#E8DEC9]"
+            onClick={() => setIsExpanded((expanded) => !expanded)}
+            type="button"
+          >
+            <ChevronDown
+              aria-hidden="true"
+              className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
+              size={18}
+            />
+          </button>
         </div>
       </div>
       {refreshMessage && (
@@ -683,13 +711,19 @@ export function AccountManager({
         </p>
       )}
 
-      {accounts.length ? (
-        <div className="ledgero-scrollbar mt-5 max-h-[400px] overflow-y-auto overscroll-contain divide-y divide-[#E8DEC9]">
+      {accounts.length === 0 ? (
+        isExpanded && (
+          <div className="mt-5 rounded-lg border border-dashed border-[#EFECE6] px-5 py-8 text-center text-sm text-[#8C827A]">
+            尚未新增帳戶
+          </div>
+        )
+      ) : isExpanded ? (
+        <div className="mt-5 divide-y divide-[#E8DEC9]" id="household-account-list">
           {accounts.map((account) => {
             const supportsStocks = ["investment", "stock", "securities"].includes(account.account_type);
             return (
               <Fragment key={account.id}>
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3.5 sm:flex sm:gap-3">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(160px,auto)] items-center gap-x-3 gap-y-2 py-3.5 sm:grid-cols-[minmax(0,1fr)_minmax(160px,auto)_auto]">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEC9] text-[#6B573F]">
                       <AccountIcon type={account.account_type} />
@@ -700,15 +734,17 @@ export function AccountManager({
                         <span className="text-xs text-[#8C827A]">{accountTypeLabels[account.account_type]}</span>
                         {!account.is_shared && <span className="text-xs text-[#8C827A]">個人</span>}
                       </div>
-                      <p className="mt-1 text-right font-mono text-xs tabular-nums text-[#8C827A]">
-                        期初 {formatBalance(account.opening_balance, account.currency)}
-                      </p>
                     </div>
                   </div>
-                  <p className="min-w-0 max-w-32 text-right font-mono text-sm font-semibold tabular-nums text-[#2C2623] [overflow-wrap:anywhere] sm:max-w-none sm:whitespace-nowrap">
-                    {formatBalance(account.balance, account.currency)}
-                  </p>
-                  <div className="col-span-2 flex items-center justify-end gap-1 sm:ml-auto">
+                  <div className="ml-auto min-w-[160px] text-right font-mono tabular-nums">
+                    <p className="break-words text-sm font-semibold text-[#2C2623]">
+                      {formatBalance(account.balance, account.currency)}
+                    </p>
+                    <p className="mt-1 break-words text-xs text-[#8C827A]">
+                      期初 {formatBalance(account.opening_balance, account.currency)}
+                    </p>
+                  </div>
+                  <div className="col-span-2 flex items-center justify-end gap-1 sm:col-span-1 sm:ml-auto">
                     {supportsStocks && (
                       <button
                         aria-expanded={portfolioAccountId === account.id}
@@ -754,11 +790,7 @@ export function AccountManager({
             );
           })}
         </div>
-      ) : (
-        <div className="mt-5 rounded-lg border border-dashed border-[#EFECE6] px-5 py-8 text-center text-sm text-[#8C827A]">
-          尚未新增帳戶
-        </div>
-      )}
+      ) : null}
 
       {(isCreating || editingAccount) && (
         <AccountForm
