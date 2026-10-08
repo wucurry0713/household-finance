@@ -24,7 +24,16 @@ export const defaultCategoryOptions: Record<CategoryKind, readonly string[]> = {
     "天然氣費 🔥",
     "管理費 🏢",
   ],
-  income: ["薪水", "股息", "油資補貼", "股票贖回"],
+  income: [
+    "薪水",
+    "股息",
+    "油資補貼",
+    "股票贖回",
+    "中獎 / 發票 🎯",
+    "紅包 / 禮金 🧧",
+    "二手售出 📦",
+    "其他收入 💰",
+  ],
 };
 
 export function isDefaultCategoryOption(

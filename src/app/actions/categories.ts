@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getFinanceContext } from "@/lib/finance/context";
 
-const customExpenseIcons = new Set([
+const customCategoryIcons = new Set([
   "utensils",
   "bus",
   "house",
@@ -13,15 +13,19 @@ const customExpenseIcons = new Set([
   "wallet",
 ]);
 
-export async function createCustomExpenseCategory(input: {
+export async function createCustomCategory(input: {
   name: string;
   icon: string;
+  kind: "expense" | "income";
 }) {
   const name = input.name.trim();
   if (!name || name.length > 40) {
     return { category: null, error: "分類名稱需為 1 至 40 個字。" };
   }
-  if (!customExpenseIcons.has(input.icon)) {
+  if (input.kind !== "expense" && input.kind !== "income") {
+    return { category: null, error: "請選擇有效的分類類型。" };
+  }
+  if (!customCategoryIcons.has(input.icon)) {
     return { category: null, error: "請選擇有效的分類圖示。" };
   }
 
@@ -33,7 +37,7 @@ export async function createCustomExpenseCategory(input: {
     .from("categories")
     .select("*")
     .eq("household_id", householdId)
-    .eq("kind", "expense")
+    .eq("kind", input.kind)
     .eq("name", name)
     .maybeSingle();
   if (findError) {
@@ -49,7 +53,7 @@ export async function createCustomExpenseCategory(input: {
     .insert({
       household_id: householdId,
       name,
-      kind: "expense",
+      kind: input.kind,
       icon: input.icon,
       is_system: false,
     })

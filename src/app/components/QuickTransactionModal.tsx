@@ -7,15 +7,19 @@ import {
   ArrowLeftRight,
   ArrowUpRight,
   ArrowRight,
+  BadgeDollarSign,
   Building2,
   Bus,
   Coffee,
   Flame,
   Film,
+  Gift,
   HeartPulse,
   House,
+  Package,
   Plus,
   ShoppingBasket,
+  Target,
   Utensils,
   Wallet,
   Droplets,
@@ -24,7 +28,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { createCustomExpenseCategory } from "@/app/actions/categories";
+import { createCustomCategory } from "@/app/actions/categories";
 import {
   createTransactionAction,
   updateTransactionAction,
@@ -82,7 +86,16 @@ const EXPENSE_ORDER = [
   "管理費 🏢",
 ];
 
-const INCOME_ORDER = ["薪水", "股息", "油資補貼", "股票贖回"];
+const INCOME_ORDER = [
+  "薪水",
+  "股息",
+  "油資補貼",
+  "股票贖回",
+  "中獎 / 發票 🎯",
+  "紅包 / 禮金 🧧",
+  "二手售出 📦",
+  "其他收入 💰",
+];
 
 const customCategoryIcons: { key: string; label: string; icon: LucideIcon }[] = [
   { key: "wallet", label: "帳務", icon: Wallet },
@@ -101,6 +114,10 @@ function getToday() {
 function getCategoryIcon(name: string, icon?: string | null) {
   const customIcon = customCategoryIcons.find((item) => item.key === icon)?.icon;
   if (customIcon) return customIcon;
+  if (/中獎|發票/.test(name)) return Target;
+  if (/紅包|禮金/.test(name)) return Gift;
+  if (/二手售出/.test(name)) return Package;
+  if (/其他收入/.test(name)) return BadgeDollarSign;
   if (/水費/.test(name)) return Droplets;
   if (/電費/.test(name)) return Zap;
   if (/天然氣/.test(name)) return Flame;
@@ -249,9 +266,10 @@ export function QuickTransactionModal({
     setIsSavingCustomCategory(true);
     setCustomCategoryError(null);
     try {
-      const result = await createCustomExpenseCategory({
+      const result = await createCustomCategory({
         name: customCategoryName,
         icon: customCategoryIcon,
+        kind: kind === "income" ? "income" : "expense",
       });
       if (result.error || !result.category) {
         setCustomCategoryError(result.error ?? "新增分類失敗。");
@@ -406,7 +424,7 @@ export function QuickTransactionModal({
                         </button>
                       );
                     })}
-                    {kind === "expense" && (
+                    {(kind === "expense" || kind === "income") && (
                       <button
                         className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[#D4C3A3] bg-white px-2 py-2 text-xs font-medium text-[#6B573F] transition hover:bg-[#E8DEC9]"
                         onClick={() => {
@@ -547,7 +565,7 @@ export function QuickTransactionModal({
                 </button>
               </div>
             </form>
-            {showCustomCategory && kind === "expense" && (
+            {showCustomCategory && (kind === "expense" || kind === "income") && (
               <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#2C2623]/35 p-4">
                 <section
                   aria-labelledby="custom-category-title"
@@ -556,7 +574,9 @@ export function QuickTransactionModal({
                   role="dialog"
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold" id="custom-category-title">新增支出分類</h3>
+                    <h3 className="text-lg font-semibold" id="custom-category-title">
+                      新增{kind === "income" ? "收入" : "支出"}分類
+                    </h3>
                     <button
                       aria-label="關閉自訂分類"
                       className="grid size-9 place-items-center rounded-full text-[#8C827A] hover:bg-[#E8DEC9]"
@@ -574,7 +594,7 @@ export function QuickTransactionModal({
                         className="mt-1.5 h-11 w-full rounded-lg border border-[#EFECE6] px-3 text-sm outline-none focus:border-[#B8976C]"
                         maxLength={40}
                         onChange={(event) => setCustomCategoryName(event.target.value)}
-                        placeholder="例如：寵物用品"
+                        placeholder={kind === "income" ? "例如：副業、退稅" : "例如：寵物用品"}
                         required
                         value={customCategoryName}
                       />
