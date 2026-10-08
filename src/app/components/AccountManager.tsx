@@ -1,7 +1,21 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { Archive, Banknote, CreditCard, Landmark, Pencil, Plus, Star, X } from "lucide-react";
+import { Fragment, useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Archive,
+  Banknote,
+  CreditCard,
+  Landmark,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Save,
+  Star,
+  Trash2,
+  TrendingUp,
+  X,
+} from "lucide-react";
 
 import {
   createAccountAction,
@@ -10,6 +24,13 @@ import {
   updateAccountAction,
   type AccountActionState,
 } from "@/app/actions/accounts";
+import {
+  createInvestment,
+  deleteInvestment,
+  refreshInvestment,
+  updateInvestment,
+  type InvestmentRow,
+} from "@/app/actions/investments";
 import { accountTypes, type AccountType } from "@/lib/finance/account-types";
 import type { DashboardAccount } from "@/lib/finance/dashboard";
 
@@ -51,6 +72,340 @@ function formatBalance(amount: number, currency: string) {
   } catch {
     return `${currency} ${amount.toLocaleString("zh-TW")}`;
   }
+}
+
+function convertCurrency(amount: number, from: string, to: string, usdTwd: number) {
+  if (from === to) return amount;
+  if (from === "USD" && to === "TWD") return amount * usdTwd;
+  if (from === "TWD" && to === "USD") return amount / usdTwd;
+  return amount;
+}
+
+function StockPortfolioManager({
+  account,
+  investments,
+}: {
+  account: DashboardAccount;
+  investments: InvestmentRow[];
+}) {
+  const router = useRouter();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [market, setMarket] = useState<"TW" | "US">("TW");
+  const [symbol, setSymbol] = useState("");
+  const [name, setName] = useState("");
+  const [shares, setShares] = useState("");
+  const [costPrice, setCostPrice] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const didCheckPrices = useRef(false);
+
+  useEffect(() => {
+    if (didCheckPrices.current) return;
+    didCheckPrices.current = true;
+    const staleInvestments = investments.filter(
+      (investment) => Date.now() - Date.parse(investment.updated_at) > 15 * 60 * 1000,
+    );
+    if (!staleInvestments.length) return;
+    let cancelled = false;
+    void Promise.all(
+      staleInvestments.map((investment) => refreshInvestment(investment.id, account.id)),
+    )
+      .then((results) => {
+        if (cancelled) return;
+        const failedResult = results.find((result) => result.error);
+        if (failedResult?.error) setError(failedResult.error);
+        if (results.some((result) => !result.error)) router.refresh();
+      })
+      .catch((refreshError: unknown) => {
+        if (!cancelled) {
+          setError(refreshError instanceof Error ? refreshError.message : "自動更新股價失敗。");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [account.id, investments, router]);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setSymbol("");
+    setName("");
+    setShares("");
+    setCostPrice("");
+    setError(null);
+  };
+
+  const editInvestment = (investment: InvestmentRow) => {
+    setEditingId(investment.id);
+    setMarket(investment.currency === "TWD" ? "TW" : "US");
+    setSymbol(investment.symbol);
+    setName(investment.name);
+    setShares(String(investment.shares));
+    setCostPrice(String(investment.cost_price));
+    setError(null);
+  };
+
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    const normalizedSymbol =
+      market === "TW" && !/\.(TW|TWO)$/i.test(symbol.trim())
+        ? `${symbol.trim()}.TW`
+        : symbol.trim();
+    const input = {
+      accountId: account.id,
+      symbol: normalizedSymbol,
+      name,
+      shares: Number(shares),
+      costPrice: Number(costPrice),
+    };
+    try {
+      const result = editingId
+        ? await updateInvestment(editingId, input)
+        : await createInvestment(input);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      resetForm();
+      router.refresh();
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleRefresh = async (investment: InvestmentRow) => {
+    setPending(true);
+    setError(null);
+    try {
+      const result = await refreshInvestment(investment.id, account.id);
+      if (result.error) setError(result.error);
+      else router.refresh();
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleDelete = async (investment: InvestmentRow) => {
+    if (!window.confirm(`確定刪除 ${investment.symbol} 的持倉明細？`)) return;
+    setPending(true);
+    setError(null);
+    try {
+      const result = await deleteInvestment(investment.id, account.id);
+      if (result.error) setError(result.error);
+      else router.refresh();
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const portfolio = investments.reduce(
+    (total, investment) => {
+      const quantity = Number(investment.shares);
+      const cost = Number(investment.cost_price) * quantity;
+      const value = Number(investment.current_price) * quantity;
+      return {
+        cost:
+          total.cost +
+          convertCurrency(cost, investment.currency, account.currency, Number(investment.exchange_rate)),
+        value:
+          total.value +
+          convertCurrency(value, investment.currency, account.currency, Number(investment.exchange_rate)),
+      };
+    },
+    { cost: 0, value: 0 },
+  );
+  const profit = portfolio.value - portfolio.cost;
+  const returnRate = portfolio.cost > 0 ? (profit / portfolio.cost) * 100 : 0;
+
+  return (
+    <div className="col-span-2 mt-2 rounded-xl border border-[#dce5de] bg-[#f7faf7] p-4 sm:w-full">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-[#18392f]">股票投資組合</h3>
+          <p className="mt-1 text-xs text-[#718078]">報價可能延遲，以下市值依最近一次更新價格計算。</p>
+        </div>
+        <button
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-[#cddbd1] px-3 text-xs font-semibold text-[#285943] disabled:opacity-50"
+          disabled={pending || !investments.length}
+          onClick={() => void Promise.all(investments.map(handleRefresh))}
+          type="button"
+        >
+          <RefreshCw size={14} />
+          更新全部股價
+        </button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-lg bg-white p-3">
+          <p className="text-xs text-[#718078]">目前市值</p>
+          <p className="mt-1 break-words text-sm font-semibold">{formatBalance(portfolio.value, account.currency)}</p>
+        </div>
+        <div className="rounded-lg bg-white p-3">
+          <p className="text-xs text-[#718078]">未實現損益</p>
+          <p className={`mt-1 break-words text-sm font-semibold ${profit < 0 ? "text-[#a05b48]" : "text-[#237457]"}`}>
+            {formatBalance(profit, account.currency)}
+          </p>
+        </div>
+        <div className="rounded-lg bg-white p-3">
+          <p className="text-xs text-[#718078]">整體報酬率</p>
+          <p className={`mt-1 text-sm font-semibold ${profit < 0 ? "text-[#a05b48]" : "text-[#237457]"}`}>
+            {returnRate.toFixed(2)}%
+          </p>
+        </div>
+      </div>
+
+      {investments.length ? (
+        <div className="mt-4 divide-y divide-[#e6ece7]">
+          {investments.map((investment) => {
+            const pnl = (Number(investment.current_price) - Number(investment.cost_price)) *
+              Number(investment.shares);
+            const pnlInAccountCurrency = convertCurrency(
+              pnl,
+              investment.currency,
+              account.currency,
+              Number(investment.exchange_rate),
+            );
+            return (
+              <div className="py-3" key={investment.id}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-semibold">
+                      {investment.name} <span className="text-xs font-normal text-[#718078]">{investment.symbol}</span>
+                    </p>
+                    <p className="mt-1 text-xs text-[#718078]">
+                      {Number(investment.shares).toLocaleString("zh-TW")} 股 · 現價{" "}
+                      {formatBalance(Number(investment.current_price), investment.currency)}
+                    </p>
+                    <p className={`mt-1 text-xs font-medium ${pnlInAccountCurrency < 0 ? "text-[#a05b48]" : "text-[#237457]"}`}>
+                      未實現損益 {formatBalance(pnlInAccountCurrency, account.currency)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      aria-label={`編輯 ${investment.symbol}`}
+                      className="rounded-md p-2 text-[#718078] hover:bg-white"
+                      disabled={pending}
+                      onClick={() => editInvestment(investment)}
+                      type="button"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      aria-label={`更新 ${investment.symbol} 股價`}
+                      className="rounded-md p-2 text-[#718078] hover:bg-white"
+                      disabled={pending}
+                      onClick={() => void handleRefresh(investment)}
+                      type="button"
+                    >
+                      <RefreshCw size={15} />
+                    </button>
+                    <button
+                      aria-label={`刪除 ${investment.symbol}`}
+                      className="rounded-md p-2 text-[#9f3e2e] hover:bg-white"
+                      disabled={pending}
+                      onClick={() => void handleDelete(investment)}
+                      type="button"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-1 text-[11px] text-[#829088]">
+                  更新時間 {new Date(investment.updated_at).toLocaleString("zh-TW")}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-lg border border-dashed border-[#d5dfd8] px-3 py-5 text-center text-sm text-[#77857e]">
+          尚無股票持倉，新增後會以最新報價估算帳戶餘額。
+        </p>
+      )}
+
+      <form className="mt-4 space-y-3 border-t border-[#e2eae3] pt-4" onSubmit={handleSave}>
+        <h4 className="text-sm font-semibold">{editingId ? "編輯持倉" : "新增股票"}</h4>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs text-[#687a70]">
+            市場
+            <select
+              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm text-[#18392f]"
+              onChange={(event) => setMarket(event.target.value as "TW" | "US")}
+              value={market}
+            >
+              <option value="TW">台股 (TWD)</option>
+              <option value="US">美股 (USD)</option>
+            </select>
+          </label>
+          <label className="text-xs text-[#687a70]">
+            股票代號
+            <input
+              autoComplete="off"
+              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm uppercase text-[#18392f]"
+              onChange={(event) => setSymbol(event.target.value)}
+              placeholder={market === "TW" ? "2330" : "NVDA"}
+              required
+              value={symbol}
+            />
+          </label>
+          <label className="text-xs text-[#687a70]">
+            股票名稱（可留空自動帶入）
+            <input
+              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm text-[#18392f]"
+              onChange={(event) => setName(event.target.value)}
+              value={name}
+            />
+          </label>
+          <label className="text-xs text-[#687a70]">
+            持有股數
+            <input
+              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm text-[#18392f]"
+              min="0.000001"
+              onChange={(event) => setShares(event.target.value)}
+              required
+              step="any"
+              type="number"
+              value={shares}
+            />
+          </label>
+          <label className="col-span-2 text-xs text-[#687a70]">
+            平均買入單價
+            <input
+              className="mt-1 h-10 w-full rounded-lg border border-[#d6dfd9] bg-white px-2 text-sm text-[#18392f]"
+              min="0.000001"
+              onChange={(event) => setCostPrice(event.target.value)}
+              required
+              step="any"
+              type="number"
+              value={costPrice}
+            />
+          </label>
+        </div>
+        {error && <p aria-live="polite" className="text-sm text-[#9f3e2e]" role="alert">{error}</p>}
+        <div className="flex gap-2">
+          <button
+            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[#1d6048] text-sm font-semibold text-white disabled:opacity-50"
+            disabled={pending}
+            type="submit"
+          >
+            <Save size={15} />
+            {pending ? "處理中…" : editingId ? "儲存修改" : "新增持倉並抓取報價"}
+          </button>
+          {editingId && (
+            <button
+              className="h-10 rounded-lg border border-[#cddbd1] px-3 text-sm text-[#52675c]"
+              onClick={resetForm}
+              type="button"
+            >
+              取消
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  );
 }
 
 function AccountForm({
@@ -240,12 +595,15 @@ function SetDefaultAccountForm({
 export function AccountManager({
   accounts,
   defaultAccountId,
+  investments,
 }: {
   accounts: DashboardAccount[];
   defaultAccountId: string | null;
+  investments: InvestmentRow[];
 }) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingAccount, setEditingAccount] = useState<DashboardAccount | null>(null);
+  const [portfolioAccountId, setPortfolioAccountId] = useState<string | null>(null);
 
   return (
     <section className="border-y border-[#dce5de] bg-white px-5 py-6 sm:px-7">
@@ -266,47 +624,74 @@ export function AccountManager({
 
       {accounts.length ? (
         <div className="mt-5 divide-y divide-[#edf1ed]">
-          {accounts.map((account) => (
-            <div
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3.5 sm:flex sm:gap-3"
-              key={account.id}
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#eaf2ec] text-[#237457]">
-                  <AccountIcon type={account.account_type} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <p className="truncate text-sm font-medium">{account.name}</p>
-                    <span className="text-xs text-[#829088]">{accountTypeLabels[account.account_type]}</span>
-                    {!account.is_shared && <span className="text-xs text-[#829088]">個人</span>}
+          {accounts.map((account) => {
+            const supportsStocks = ["investment", "stock", "securities"].includes(account.account_type);
+            return (
+              <Fragment key={account.id}>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3.5 sm:flex sm:gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#eaf2ec] text-[#237457]">
+                      <AccountIcon type={account.account_type} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <p className="truncate text-sm font-medium">{account.name}</p>
+                        <span className="text-xs text-[#829088]">{accountTypeLabels[account.account_type]}</span>
+                        {!account.is_shared && <span className="text-xs text-[#829088]">個人</span>}
+                      </div>
+                      <p className="mt-1 text-xs text-[#829088]">
+                        期初 {formatBalance(account.opening_balance, account.currency)}
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-[#829088]">
-                    期初 {formatBalance(account.opening_balance, account.currency)}
+                  <p className="min-w-0 max-w-32 text-right text-sm font-semibold text-[#18392f] [overflow-wrap:anywhere] sm:max-w-none sm:whitespace-nowrap">
+                    {formatBalance(account.balance, account.currency)}
                   </p>
+                  <div className="col-span-2 flex items-center justify-end gap-1 sm:ml-auto">
+                    {supportsStocks && (
+                      <button
+                        aria-expanded={portfolioAccountId === account.id}
+                        aria-label={`管理 ${account.name} 股票明細`}
+                        className={`flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium ${
+                          portfolioAccountId === account.id
+                            ? "bg-[#edf5e7] text-[#285943]"
+                            : "text-[#728178] hover:bg-[#edf2ee]"
+                        }`}
+                        onClick={() => setPortfolioAccountId(
+                          portfolioAccountId === account.id ? null : account.id,
+                        )}
+                        title="股票明細"
+                        type="button"
+                      >
+                        <TrendingUp size={14} />
+                        股票明細
+                      </button>
+                    )}
+                    <SetDefaultAccountForm
+                      accountId={account.id}
+                      isDefault={defaultAccountId === account.id}
+                    />
+                    <button
+                      aria-label={`編輯 ${account.name}`}
+                      className="rounded-md p-2 text-[#7a8981] transition hover:bg-[#edf2ee] hover:text-[#285943]"
+                      onClick={() => setEditingAccount(account)}
+                      title="編輯帳戶"
+                      type="button"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <DeleteAccountForm accountId={account.id} />
+                  </div>
                 </div>
-              </div>
-              <p className="min-w-0 max-w-32 text-right text-sm font-semibold text-[#18392f] [overflow-wrap:anywhere] sm:max-w-none sm:whitespace-nowrap">
-                {formatBalance(account.balance, account.currency)}
-              </p>
-              <div className="col-span-2 flex items-center justify-end gap-1 sm:ml-auto">
-                <SetDefaultAccountForm
-                  accountId={account.id}
-                  isDefault={defaultAccountId === account.id}
-                />
-                <button
-                  aria-label={`編輯 ${account.name}`}
-                  className="rounded-md p-2 text-[#7a8981] transition hover:bg-[#edf2ee] hover:text-[#285943]"
-                  onClick={() => setEditingAccount(account)}
-                  title="編輯帳戶"
-                  type="button"
-                >
-                  <Pencil size={16} />
-                </button>
-                <DeleteAccountForm accountId={account.id} />
-              </div>
-            </div>
-          ))}
+                {portfolioAccountId === account.id && supportsStocks && (
+                  <StockPortfolioManager
+                    account={account}
+                    investments={investments.filter((investment) => investment.account_id === account.id)}
+                  />
+                )}
+              </Fragment>
+            );
+          })}
         </div>
       ) : (
         <div className="mt-5 rounded-lg border border-dashed border-[#d5dfd8] px-5 py-8 text-center text-sm text-[#77857e]">

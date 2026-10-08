@@ -211,6 +211,7 @@ export function DashboardWorkspace({
           <AccountManager
             accounts={visibleAccounts}
             defaultAccountId={dashboard.defaultAccountId}
+            investments={dashboard.investments}
           />
           <RecentTransactions
             accounts={dashboard.accounts}

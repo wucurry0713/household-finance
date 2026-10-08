@@ -370,6 +370,32 @@ export type Database = {
           updated_at?: string;
         }
       >;
+      investments: Table<
+        {
+          id: string;
+          account_id: string;
+          symbol: string;
+          name: string;
+          shares: number;
+          cost_price: number;
+          current_price: number;
+          currency: "TWD" | "USD";
+          exchange_rate: number;
+          updated_at: string;
+        },
+        {
+          id?: string;
+          account_id: string;
+          symbol: string;
+          name: string;
+          shares: number;
+          cost_price: number;
+          current_price: number;
+          currency: "TWD" | "USD";
+          exchange_rate?: number;
+          updated_at?: string;
+        }
+      >;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

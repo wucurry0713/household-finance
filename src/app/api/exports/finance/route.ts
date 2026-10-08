@@ -62,10 +62,23 @@ async function loadAssetSummary(
   >;
   type Holding = Pick<
     Database["public"]["Tables"]["holdings"]["Row"],
-    "currency" | "quantity" | "current_price" | "average_cost"
+    "account_id" | "currency" | "quantity" | "current_price" | "average_cost"
   >;
+  type Investment = Database["public"]["Tables"]["investments"]["Row"];
 
-  const [accounts, entries, assets, valuations, liabilities, holdings] = await Promise.all([
+  const convertInvestmentValue = (investment: Investment, targetCurrency: string) => {
+    const marketValue = Number(investment.shares) * Number(investment.current_price);
+    if (investment.currency === targetCurrency) return marketValue;
+    if (investment.currency === "USD" && targetCurrency === "TWD") {
+      return marketValue * Number(investment.exchange_rate);
+    }
+    if (investment.currency === "TWD" && targetCurrency === "USD") {
+      return marketValue / Number(investment.exchange_rate);
+    }
+    return marketValue;
+  };
+
+  const [accounts, entries, assets, valuations, liabilities, holdings, investments] = await Promise.all([
     loadPages<Account>(
       (from, to) =>
         supabase
@@ -117,10 +130,14 @@ async function loadAssetSummary(
       (from, to) =>
         supabase
           .from("holdings")
-          .select("currency, quantity, current_price, average_cost")
+          .select("account_id, currency, quantity, current_price, average_cost")
           .eq("household_id", householdId)
           .range(from, to),
       "holdings",
+    ),
+    loadPages<Investment>(
+      (from, to) => supabase.from("investments").select("*").range(from, to),
+      "investments",
     ),
   ]);
 
@@ -136,6 +153,26 @@ async function loadAssetSummary(
     }
   }
 
+  const investmentsByAccount = new Map<string, Investment[]>();
+  for (const investment of investments) {
+    const bucket = investmentsByAccount.get(investment.account_id) ?? [];
+    bucket.push(investment);
+    investmentsByAccount.set(investment.account_id, bucket);
+  }
+  const portfolioAccountIds = new Set(investmentsByAccount.keys());
+  for (const account of accounts) {
+    const positions = investmentsByAccount.get(account.id);
+    if (positions) {
+      balances.set(
+        account.id,
+        positions.reduce(
+          (sum, investment) => sum + convertInvestmentValue(investment, account.currency),
+          0,
+        ),
+      );
+    }
+  }
+
   const liabilityAccountTypes = new Set(["loan", "liability"]);
   const investmentAccountTypes = new Set(["investment", "stock", "securities"]);
   const totalAssetAccounts = accounts
@@ -147,9 +184,15 @@ async function loadAssetSummary(
   const investmentAccounts = accounts
     .filter(
       (account) =>
-        account.currency === currency && investmentAccountTypes.has(account.account_type),
+        account.currency === currency &&
+        investmentAccountTypes.has(account.account_type) &&
+        !portfolioAccountIds.has(account.id),
     )
     .reduce((sum, account) => sum + (balances.get(account.id) ?? 0), 0);
+  const portfolioValue = investments.reduce(
+    (sum, investment) => sum + convertInvestmentValue(investment, currency),
+    0,
+  );
   const accountLiabilities = accounts
     .filter(
       (account) =>
@@ -157,7 +200,11 @@ async function loadAssetSummary(
     )
     .reduce((sum, account) => sum + Math.abs(balances.get(account.id) ?? 0), 0);
   const holdingValue = holdings
-    .filter((holding) => holding.currency === currency)
+    .filter(
+      (holding) =>
+        holding.currency === currency &&
+        (!holding.account_id || !portfolioAccountIds.has(holding.account_id)),
+    )
     .reduce(
       (sum, holding) =>
         sum +
@@ -204,7 +251,7 @@ async function loadAssetSummary(
           (account.account_type === "bank" || account.account_type === "cash"),
       )
       .reduce((sum, account) => sum + (balances.get(account.id) ?? 0), 0),
-    investments: investmentAccounts + holdingValue,
+    investments: investmentAccounts + portfolioValue + holdingValue,
     realEstate: realEstateValue,
     mortgage: mortgageValue,
     otherAssets: assetValue - realEstateValue,

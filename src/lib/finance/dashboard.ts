@@ -9,6 +9,7 @@ type AccountRow = Database["public"]["Tables"]["accounts"]["Row"];
 type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
 type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
 type EntryRow = Database["public"]["Tables"]["transaction_entries"]["Row"];
+type InvestmentRow = Database["public"]["Tables"]["investments"]["Row"];
 
 const cashAccountTypes: ReadonlySet<string> = new Set(["bank", "cash"]);
 const investmentAccountTypes: ReadonlySet<string> = new Set([
@@ -76,6 +77,7 @@ export type DashboardTransaction = Omit<TransactionRow, "kind"> & {
 
 export type DashboardData = {
   accounts: DashboardAccount[];
+  investments: InvestmentRow[];
   defaultAccountId: string | null;
   categories: CategoryRow[];
   members: DashboardMember[];
@@ -139,6 +141,7 @@ export async function loadDashboardData(
     valuationsResult,
     liabilitiesResult,
     holdingsResult,
+    investmentsResult,
     preferencesResult,
     membersResult,
     invitationsResult,
@@ -174,8 +177,9 @@ export async function loadDashboardData(
       .eq("household_id", householdId),
     supabase
       .from("holdings")
-      .select("owner_id, is_joint, quantity, current_price, average_cost, currency")
+      .select("owner_id, is_joint, account_id, quantity, current_price, average_cost, currency")
       .eq("household_id", householdId),
+    supabase.from("investments").select("*"),
     supabase
       .from("household_preferences")
       .select("default_account_id")
@@ -204,12 +208,16 @@ export async function loadDashboardData(
     ["asset valuations", valuationsResult.error],
     ["liabilities", liabilitiesResult.error],
     ["holdings", holdingsResult.error],
+    ["investments", investmentsResult.error],
     ["household preferences", preferencesResult.error],
     ["household members", membersResult.error],
     ["household invitations", invitationsResult.error],
   ] as const;
   for (const [stage, error] of results) {
-    if (error) reportError(stage, error);
+    if (error) {
+      reportError(stage, error);
+      if (stage === "investments") throw new Error(`Investments query failed: ${error.message}`);
+    }
   }
 
   const accounts = accountsResult.data ?? [];
@@ -224,6 +232,7 @@ export async function loadDashboardData(
   const valuations = valuationsResult.data ?? [];
   const liabilities = liabilitiesResult.data ?? [];
   const holdings = holdingsResult.data ?? [];
+  const investments = investmentsResult.data ?? [];
   const memberships = membersResult.data ?? [];
   const pendingInvitations = invitationsResult.data ?? [];
 
@@ -319,20 +328,33 @@ export async function loadDashboardData(
     };
   });
 
+  const investmentsByAccount = new Map<string, InvestmentRow[]>();
+  for (const investment of investments) {
+    const bucket = investmentsByAccount.get(investment.account_id) ?? [];
+    bucket.push(investment);
+    investmentsByAccount.set(investment.account_id, bucket);
+  }
+  const portfolioAccountIds = new Set(investmentsByAccount.keys());
+  const convertInvestmentValue = (investment: InvestmentRow, targetCurrency: string) => {
+    const marketValue = Number(investment.shares) * Number(investment.current_price);
+    if (investment.currency === targetCurrency) return marketValue;
+    const usdTwd = Number(investment.exchange_rate);
+    if (investment.currency === "USD" && targetCurrency === "TWD") {
+      return marketValue * usdTwd;
+    }
+    if (investment.currency === "TWD" && targetCurrency === "USD") {
+      return marketValue / usdTwd;
+    }
+    return marketValue;
+  };
   const balancesByAccount = accounts.map((account) => ({
     ...account,
-    balance: accountBalances.get(account.id) ?? Number(account.opening_balance) ?? 0,
+    balance: investmentsByAccount.has(account.id)
+      ? investmentsByAccount
+          .get(account.id)!
+          .reduce((sum, investment) => sum + convertInvestmentValue(investment, account.currency), 0)
+      : accountBalances.get(account.id) ?? Number(account.opening_balance) ?? 0,
   }));
-  const sumAccountBalances = (
-    accountRows: typeof balancesByAccount,
-    accountTypes: ReadonlySet<string>,
-  ) =>
-    accountRows
-      .filter(
-        (account) =>
-          account.currency === baseCurrency && accountTypes.has(account.account_type),
-      )
-      .reduce((sum, account) => sum + account.balance, 0);
   const accountAssets = balancesByAccount
     .filter(
       (account) =>
@@ -341,10 +363,19 @@ export async function loadDashboardData(
         !isOtherAssetAccount(account),
     )
     .reduce((sum, account) => sum + account.balance, 0);
-  const investmentAccountValue = sumAccountBalances(
-    balancesByAccount,
-    investmentAccountTypes,
-  );
+  const investmentAccountValue =
+    balancesByAccount
+      .filter(
+        (account) =>
+          account.currency === baseCurrency &&
+          investmentAccountTypes.has(account.account_type) &&
+          !portfolioAccountIds.has(account.id),
+      )
+      .reduce((sum, account) => sum + account.balance, 0) +
+    investments.reduce(
+      (sum, investment) => sum + convertInvestmentValue(investment, baseCurrency),
+      0,
+    );
   const otherAssetAccountValue = balancesByAccount
     .filter((account) => account.currency === baseCurrency && isOtherAssetAccount(account))
     .reduce((sum, account) => sum + account.balance, 0);
@@ -373,7 +404,11 @@ export async function loadDashboardData(
   const investmentValue =
     investmentAccountValue +
     holdings
-      .filter((holding) => holding.currency === baseCurrency)
+      .filter(
+        (holding) =>
+          holding.currency === baseCurrency &&
+          (!holding.account_id || !portfolioAccountIds.has(holding.account_id)),
+      )
       .reduce(
         (sum, holding) =>
           sum +
@@ -435,10 +470,26 @@ export async function loadDashboardData(
             sum + (latestValuation.get(asset.id) ?? Number(asset.purchase_price) ?? 0),
           0,
         );
+    const memberAccountIds = new Set(memberAccounts.map((account) => account.id));
     const memberInvestments =
-      sumAccountBalances(memberAccounts, investmentAccountTypes) +
+      memberAccounts
+        .filter(
+          (account) =>
+            account.currency === baseCurrency &&
+            investmentAccountTypes.has(account.account_type) &&
+            !portfolioAccountIds.has(account.id),
+        )
+        .reduce((sum, account) => sum + account.balance, 0) +
+      investments
+        .filter((investment) => memberAccountIds.has(investment.account_id))
+        .reduce((sum, investment) => sum + convertInvestmentValue(investment, baseCurrency), 0) +
       holdings
-        .filter((holding) => owns(holding) && holding.currency === baseCurrency)
+        .filter(
+          (holding) =>
+            owns(holding) &&
+            holding.currency === baseCurrency &&
+            (!holding.account_id || !portfolioAccountIds.has(holding.account_id)),
+        )
         .reduce(
           (sum, holding) =>
             sum +
@@ -480,6 +531,7 @@ export async function loadDashboardData(
 
   return {
     accounts: balancesByAccount,
+    investments,
     defaultAccountId: preferencesResult.data?.default_account_id ?? null,
     categories,
     members,
