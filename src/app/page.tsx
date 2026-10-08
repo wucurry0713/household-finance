@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/app/components/AppHeader";
 import { DashboardWorkspace } from "@/app/components/DashboardWorkspace";
-import { MonthSelector } from "@/app/components/MonthSelector";
 import { loadDashboardData } from "@/lib/finance/dashboard";
 import { normalizeMonthKey } from "@/lib/finance/month";
 import { ensureUserProfileAndHousehold } from "@/lib/supabase/provision";
@@ -29,7 +28,7 @@ export default async function Home({
     supabase.from("users").select("display_name").eq("id", user.id).maybeSingle(),
     supabase
       .from("households")
-      .select("name, base_currency")
+      .select("base_currency")
       .eq("id", provision.householdId)
       .single(),
   ]);
@@ -53,12 +52,9 @@ export default async function Home({
       <AppHeader currentPage="dashboard" displayName={displayName} month={selectedMonth} />
 
       <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl sm:px-8 sm:py-14">
-        <MonthSelector month={selectedMonth} />
         <DashboardWorkspace
           currentUserId={user.id}
           dashboard={dashboard}
-          displayName={displayName}
-          householdName={household?.name ?? "我的家庭"}
           baseCurrency={baseCurrency}
           selectedMonth={selectedMonth}
         />

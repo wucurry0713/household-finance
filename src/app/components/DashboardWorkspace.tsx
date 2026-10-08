@@ -14,6 +14,7 @@ import { AccountManager } from "@/app/components/AccountManager";
 import { HouseholdMembersPanel } from "@/app/components/HouseholdMembersPanel";
 import { QuickTransactionModal } from "@/app/components/QuickTransactionModal";
 import { RecentTransactions } from "@/app/components/RecentTransactions";
+import { MonthSelector } from "@/app/components/MonthSelector";
 import type { DashboardData } from "@/lib/finance/dashboard";
 import { monthLabel } from "@/lib/finance/month";
 
@@ -101,15 +102,11 @@ function CashFlowLine({
 export function DashboardWorkspace({
   currentUserId,
   dashboard,
-  displayName,
-  householdName,
   baseCurrency,
   selectedMonth,
 }: {
   currentUserId: string;
   dashboard: DashboardData;
-  displayName: string;
-  householdName: string;
   baseCurrency: string;
   selectedMonth: string;
 }) {
@@ -136,21 +133,9 @@ export function DashboardWorkspace({
 
   return (
     <>
-      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-sm font-medium text-[#8C827A]">家庭總覽</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">
-            {activeMember ? `${activeMember.displayName} 的視角` : householdName}
-          </h1>
-        </div>
-        <div className="text-sm text-[#8C827A]">
-          歡迎回來，<span className="font-medium text-[#2C2623]">{displayName}</span>
-        </div>
-      </div>
-
       <div
         aria-label="切換 Dashboard 視角"
-        className="mt-7 flex w-full gap-1 overflow-x-auto rounded-lg bg-[#E8DEC9] p-1 sm:w-fit"
+        className="flex w-full gap-1 overflow-x-auto rounded-lg bg-[#E8DEC9] p-1 sm:w-fit"
         role="group"
       >
         {currentMember && (
@@ -200,7 +185,7 @@ export function DashboardWorkspace({
         ))}
       </div>
 
-      <section aria-label="家庭財務摘要" className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label="家庭財務摘要" className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryItem
           icon={<Wallet size={18} />}
           label="家庭淨資產"
@@ -222,6 +207,10 @@ export function DashboardWorkspace({
           value={formatMoney(totals.monthBalance, baseCurrency)}
         />
       </section>
+
+      <div className="mt-5">
+        <MonthSelector month={selectedMonth} />
+      </div>
 
       <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
         <div className="min-w-0 space-y-8">
