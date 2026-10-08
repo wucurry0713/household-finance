@@ -3,8 +3,24 @@ import type { Database } from "@/types/database";
 export type CategoryKind = Database["public"]["Tables"]["categories"]["Row"]["kind"];
 
 export const defaultCategoryOptions: Record<CategoryKind, readonly string[]> = {
-  expense: ["餐飲", "交通", "購物", "生活用品"],
-  income: ["薪資", "獎金", "其他收入"],
+  expense: [
+    "早餐",
+    "午餐",
+    "晚餐",
+    "交通",
+    "家人",
+    "出國旅費",
+    "房貸",
+    "社交",
+    "電話費",
+    "保險",
+    "治裝費",
+    "日用品",
+    "醫療",
+    "稅務",
+    "其他",
+  ],
+  income: ["薪水", "股息", "油資補貼", "股票贖回"],
 };
 
 export function isDefaultCategoryOption(
