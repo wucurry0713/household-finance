@@ -731,25 +731,25 @@ export function AccountManager({
             const supportsStocks = ["investment", "stock", "securities"].includes(account.account_type);
             return (
               <Fragment key={account.id}>
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(112px,160px)_164px] items-center gap-x-3 gap-y-2 py-3.5">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 py-3.5 sm:grid-cols-[minmax(0,1fr)_minmax(112px,160px)_164px]">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEC9] text-[#6B573F]">
                       <AccountIcon type={account.account_type} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{account.name}</p>
+                      <p className="truncate text-base font-medium">{account.name}</p>
                       <p className="mt-0.5 truncate text-xs text-[#8C827A]">
                         {accountTypeLabels[account.account_type]}
                         {!account.is_shared && " · 個人"}
                       </p>
                     </div>
                   </div>
-                  <div className="min-w-0 text-right font-mono tabular-nums">
-                    <p className="break-words text-sm font-semibold text-[#2C2623]">
+                  <div className="min-w-0 shrink-0 text-right font-mono tabular-nums">
+                    <p className="whitespace-nowrap text-sm font-semibold text-[#2C2623]">
                       {formatBalance(account.balance, account.currency)}
                     </p>
                   </div>
-                  <div className="grid w-[164px] grid-cols-[92px_32px_32px] items-center justify-items-center gap-1">
+                  <div className="col-span-2 ml-auto grid w-[164px] shrink-0 grid-cols-[92px_32px_32px] items-center justify-items-center gap-1 sm:col-span-1 sm:ml-0">
                     <span className="flex w-[92px] justify-center">
                       {supportsStocks && (
                         <button
