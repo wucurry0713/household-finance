@@ -10,6 +10,7 @@ import {
   type ExpenseScopeFilter,
 } from "@/lib/finance/expense-scope";
 import { monthLabel } from "@/lib/finance/month";
+import { ExcelExportButton } from "@/app/components/ExcelExportButton";
 
 type Metric = "expense" | "income" | "balance";
 type Period = "month" | "six_months" | "year";
@@ -157,6 +158,7 @@ export function AnalyticsWorkspace({
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">分析統計</h1>
         </div>
         <div className="flex flex-wrap gap-2">
+          <ExcelExportButton expenseScope={scopeFilter} month={selectedMonth} />
           {(["expense", "income", "balance"] as const).map((option) => (
             <button
               aria-pressed={metric === option}

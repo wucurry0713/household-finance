@@ -227,6 +227,7 @@ export function DashboardWorkspace({
             monthLabel={monthLabel(selectedMonth)}
             monthlyExpenseTotal={totals.monthExpenses}
             currency={baseCurrency}
+            selectedMonth={selectedMonth}
           />
         </div>
 

@@ -93,6 +93,7 @@ export function RecentTransactions({
   monthLabel,
   monthlyExpenseTotal,
   currency,
+  selectedMonth,
 }: {
   accounts: DashboardAccount[];
   categories: Category[];
@@ -101,6 +102,7 @@ export function RecentTransactions({
   monthLabel: string;
   monthlyExpenseTotal: number;
   currency: string;
+  selectedMonth: string;
 }) {
   const [isExpenseExpanded, setIsExpenseExpanded] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<DashboardTransaction | null>(null);
@@ -201,7 +203,7 @@ export function RecentTransactions({
                 <Download size={15} />
                 {isExporting ? "準備中…" : "匯出 CSV"}
               </button>
-              <ExcelExportButton />
+              <ExcelExportButton month={selectedMonth} ownerId={viewOwnerId} />
             </>
           )}
           <button
