@@ -4,6 +4,11 @@ import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, ChartPie, TrendingUp } from "lucide-react";
 
 import type { TransactionReportRow } from "@/lib/finance/transaction-report";
+import {
+  expenseScopeLabels,
+  expenseScopes,
+  type ExpenseScopeFilter,
+} from "@/lib/finance/expense-scope";
 import { monthLabel } from "@/lib/finance/month";
 
 type Metric = "expense" | "income" | "balance";
@@ -55,6 +60,7 @@ export function AnalyticsWorkspace({
 }) {
   const [metric, setMetric] = useState<Metric>("expense");
   const [period, setPeriod] = useState<Period>("month");
+  const [scopeFilter, setScopeFilter] = useState<ExpenseScopeFilter>("all");
   const currentMonth = selectedMonth;
   const previousMonth = shiftMonth(currentMonth, -1);
   const firstMonth =
@@ -63,7 +69,11 @@ export function AnalyticsWorkspace({
       : period === "six_months"
         ? shiftMonth(currentMonth, -5)
         : currentMonth;
-  const currencyTransactions = transactions.filter((row) => row.currency === currency);
+  const currencyTransactions = transactions.filter(
+    (row) =>
+      row.currency === currency &&
+      (row.kind !== "expense" || scopeFilter === "all" || row.scope === scopeFilter),
+  );
   const currentRows = currencyTransactions.filter(
     (row) => row.date.slice(0, 7) >= firstMonth && row.date.slice(0, 7) <= currentMonth,
   );
@@ -182,6 +192,32 @@ export function AnalyticsWorkspace({
           </button>
         ))}
       </div>
+
+      <div
+        aria-label="支出對象篩選"
+        className="flex w-full gap-1 overflow-x-auto rounded-lg bg-[#E8DEC9] p-1 sm:w-fit"
+        role="group"
+      >
+        {(["all", ...expenseScopes] as const).map((option) => {
+          const label = option === "all" ? "全部支出" : expenseScopeLabels[option];
+          return (
+            <button
+              aria-pressed={scopeFilter === option}
+              className={`h-9 shrink-0 rounded-md px-3 text-sm font-medium transition ${
+                scopeFilter === option
+                  ? "bg-[#B8976C] text-white shadow-sm"
+                  : "text-[#8C827A] hover:text-[#2C2623]"
+              }`}
+              key={option}
+              onClick={() => setScopeFilter(option)}
+              type="button"
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="-mt-4 text-xs text-[#8C827A]">此篩選套用於支出；收入金額不受影響。</p>
 
       <section className="grid gap-4 sm:grid-cols-2">
         <article className="border-l-2 border-[#D4C3A3] bg-white px-5 py-5">

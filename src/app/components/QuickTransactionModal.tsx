@@ -15,12 +15,14 @@ import {
   Film,
   Gift,
   HeartPulse,
+  HeartHandshake,
   House,
   Package,
   Plus,
   ShoppingBasket,
   Target,
   Utensils,
+  UserRound,
   Wallet,
   Droplets,
   Zap,
@@ -35,6 +37,11 @@ import {
   type TransactionActionState,
 } from "@/app/actions/transactions";
 import { defaultCategoryOptions } from "@/lib/finance/default-categories";
+import {
+  expenseScopeLabels,
+  expenseScopes,
+  type ExpenseScope,
+} from "@/lib/finance/expense-scope";
 import type { DashboardAccount } from "@/lib/finance/dashboard";
 import type { Database } from "@/types/database";
 
@@ -50,6 +57,7 @@ export type EditableTransaction = {
   categoryId: string | null;
   accountId: string | null;
   destinationAccountId: string | null;
+  scope: ExpenseScope;
 };
 
 const initialState: TransactionActionState = {
@@ -160,6 +168,7 @@ export function QuickTransactionModal({
   );
   const [date, setDate] = useState(initialTransaction?.transaction_date ?? getToday());
   const [notes, setNotes] = useState(initialTransaction?.notes ?? "");
+  const [scope, setScope] = useState<ExpenseScope>(initialTransaction?.scope ?? "personal");
   const [state, setState] = useState(initialState);
   const [isPending, startTransition] = useTransition();
   const [showCustomCategory, setShowCustomCategory] = useState(false);
@@ -232,6 +241,7 @@ export function QuickTransactionModal({
     setShowMoreOptions(false);
     setDate(getToday());
     setNotes("");
+    setScope("personal");
     setState(initialState);
     setShowCustomCategory(false);
     setCustomCategoryName("");
@@ -379,6 +389,7 @@ export function QuickTransactionModal({
                 )}
                 <input name="kind" type="hidden" value={kind} />
                 <input name="category_id" type="hidden" value={categoryId} />
+                <input name="scope" type="hidden" value={scope} />
 
                 <label className="block rounded-xl border border-[#EFECE6] bg-white px-4 py-3">
                 <span className="text-xs font-medium text-[#8C827A]">
@@ -464,6 +475,38 @@ export function QuickTransactionModal({
                   )}
                 </div>
                 ) : null}
+
+                {kind === "expense" && (
+                  <fieldset>
+                    <legend className="mb-2 text-sm font-medium">消費參與者</legend>
+                    <div aria-label="消費參與者" className="grid grid-cols-3 rounded-lg bg-[#E8DEC9] p-1" role="group">
+                      {expenseScopes.map((option) => {
+                        const Icon =
+                          option === "personal"
+                            ? UserRound
+                            : option === "shared"
+                              ? HeartHandshake
+                              : House;
+                        return (
+                          <button
+                            aria-pressed={scope === option}
+                            className={`flex h-10 items-center justify-center gap-1 rounded-md px-1 text-xs font-medium transition sm:gap-1.5 sm:text-sm ${
+                              scope === option
+                                ? "bg-[#B8976C] text-white shadow-sm"
+                                : "text-[#8C827A] hover:text-[#2C2623]"
+                            }`}
+                            key={option}
+                            onClick={() => setScope(option)}
+                            type="button"
+                          >
+                            <Icon aria-hidden="true" size={15} />
+                            {expenseScopeLabels[option]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                )}
 
                 <div className="border-t border-[#EFECE6] pt-3">
                 <button

@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database";
+import type { ExpenseScope } from "@/lib/finance/expense-scope";
 
 type FinanceClient = SupabaseClient<Database>;
 type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
@@ -17,6 +18,7 @@ type CategoryLabel = {
 export type TransactionReportRow = {
   date: string;
   kind: "income" | "expense";
+  scope: ExpenseScope;
   amount: number;
   currency: string;
   category: string;
@@ -42,14 +44,21 @@ async function loadAllTransactions(
 ) {
   const transactions: Pick<
     TransactionRow,
-    "id" | "kind" | "transaction_date" | "currency" | "description" | "notes" | "created_at"
+    | "id"
+    | "kind"
+    | "scope"
+    | "transaction_date"
+    | "currency"
+    | "description"
+    | "notes"
+    | "created_at"
   >[] = [];
   const pageSize = 500;
 
   for (let offset = 0; ; offset += pageSize) {
     let query = supabase
       .from("transactions")
-      .select("id, kind, transaction_date, currency, description, notes, created_at")
+      .select("id, kind, scope, transaction_date, currency, description, notes, created_at")
       .eq("household_id", householdId)
       .in("kind", ["income", "expense"])
       .order("transaction_date", { ascending: true })
@@ -185,6 +194,7 @@ export async function loadTransactionReportRows(
     return categorySplits.map((split) => ({
       date: transaction.transaction_date,
       kind: transaction.kind as "income" | "expense",
+      scope: transaction.scope,
       amount: Number(split.amount),
       currency: transaction.currency,
       category: split.category_id

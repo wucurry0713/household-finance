@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getFinanceContext } from "@/lib/finance/context";
 import { isDefaultCategoryOption } from "@/lib/finance/default-categories";
+import { isExpenseScope, type ExpenseScope } from "@/lib/finance/expense-scope";
 import type { Database } from "@/types/database";
 
 export type TransactionActionState = {
@@ -23,6 +24,7 @@ type TransactionInput = {
   transactionDate: string;
   notes: string | null;
   currency: string;
+  scope: ExpenseScope;
 };
 
 const failed = (
@@ -41,6 +43,7 @@ function parseTransactionInput(formData: FormData):
   const fallbackCategory = String(formData.get("fallback_category") ?? "").trim();
   const transactionDate = String(formData.get("transaction_date") ?? "");
   const notes = String(formData.get("notes") ?? "").trim();
+  const scopeValue = formData.get("scope");
 
   if (kind !== "income" && kind !== "expense" && kind !== "transfer") {
     return { input: null, error: "請選擇有效的交易類型。" };
@@ -57,6 +60,9 @@ function parseTransactionInput(formData: FormData):
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(transactionDate)) {
     return { input: null, error: "請選擇有效日期。" };
+  }
+  if (!isExpenseScope(scopeValue)) {
+    return { input: null, error: "請選擇有效的消費對象。" };
   }
   const parsedDate = new Date(`${transactionDate}T00:00:00.000Z`);
   if (Number.isNaN(parsedDate.valueOf()) || parsedDate.toISOString().slice(0, 10) !== transactionDate) {
@@ -79,6 +85,7 @@ function parseTransactionInput(formData: FormData):
       transactionDate,
       notes: notes || null,
       currency: "TWD",
+      scope: kind === "expense" ? scopeValue : "personal",
     },
     error: null,
   };
@@ -296,6 +303,7 @@ export async function createTransactionAction(
     paid_by_user_id: user.id,
     owner_id: user.id,
     is_joint: resolved.isJoint,
+    scope: input.scope,
     kind: input.kind,
     transaction_date: input.transactionDate,
     currency: input.currency,
@@ -381,6 +389,7 @@ export async function updateTransactionAction(
       paid_by_user_id: user.id,
       owner_id: user.id,
       is_joint: resolved.isJoint,
+      scope: input.scope,
       transaction_date: input.transactionDate,
       currency: input.currency,
       description: transactionDescription(input, resolved.category?.name ?? null),
@@ -408,6 +417,7 @@ export async function updateTransactionAction(
         paid_by_user_id: oldTransaction.paid_by_user_id,
         owner_id: oldTransaction.owner_id,
         is_joint: oldTransaction.is_joint,
+        scope: oldTransaction.scope,
         transaction_date: oldTransaction.transaction_date,
         currency: oldTransaction.currency,
         description: oldTransaction.description,
