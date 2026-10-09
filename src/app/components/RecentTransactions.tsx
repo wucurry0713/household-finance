@@ -21,7 +21,6 @@ import type { Database } from "@/types/database";
 import { QuickTransactionModal } from "@/app/components/QuickTransactionModal";
 import { ExcelExportButton } from "@/app/components/ExcelExportButton";
 import { DeleteConfirmationDialog } from "@/app/components/DeleteConfirmationDialog";
-import { expenseScopeLabels } from "@/lib/finance/expense-scope";
 
 type Category = Database["public"]["Tables"]["categories"]["Row"];
 type ExportScope = "current_month" | "month" | "all";
@@ -265,9 +264,13 @@ export function RecentTransactions({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
                         {transaction.notes || transaction.description || (isTransfer ? "帳戶轉帳" : detail)}
-                        {transaction.scope === "shared" && (
+                        {transaction.kind === "expense" && transaction.scope !== "personal" && (
                           <span className="ml-2 inline-flex rounded-full bg-[#E8DEC9] px-2 py-0.5 align-middle text-[10px] font-medium text-[#6B573F]">
-                            {expenseScopeLabels.shared}
+                            {transaction.scope === "spouse"
+                              ? "代付·老婆"
+                              : transaction.scope === "shared"
+                                ? "雙人"
+                                : "家庭"}
                           </span>
                         )}
                       </p>

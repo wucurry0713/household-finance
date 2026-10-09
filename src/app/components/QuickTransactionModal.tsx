@@ -23,6 +23,7 @@ import {
   Target,
   Utensils,
   UserRound,
+  Venus,
   Wallet,
   Droplets,
   Zap,
@@ -486,7 +487,9 @@ export function QuickTransactionModal({
                             ? UserRound
                             : option === "shared"
                               ? HeartHandshake
-                              : House;
+                              : option === "spouse"
+                                ? Venus
+                                : House;
                         return (
                           <button
                             aria-pressed={scope === option}
@@ -500,7 +503,7 @@ export function QuickTransactionModal({
                             type="button"
                           >
                             <Icon aria-hidden="true" size={15} />
-                            {expenseScopeLabels[option]}
+                            {option === "spouse" ? "老婆" : option === "personal" ? "個人" : expenseScopeLabels[option]}
                           </button>
                         );
                       })}

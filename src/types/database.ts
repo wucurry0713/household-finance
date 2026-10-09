@@ -186,7 +186,7 @@ export type Database = {
           paid_by_user_id: string | null;
           owner_id: string | null;
           is_joint: boolean;
-          scope: "personal" | "shared" | "family";
+          scope: "personal" | "shared" | "spouse" | "family";
           kind: "income" | "expense" | "transfer" | "adjustment";
           transaction_date: string;
           currency: string;
@@ -202,7 +202,7 @@ export type Database = {
           paid_by_user_id?: string | null;
           owner_id?: string | null;
           is_joint?: boolean;
-          scope?: "personal" | "shared" | "family";
+          scope?: "personal" | "shared" | "spouse" | "family";
           kind: "income" | "expense" | "transfer" | "adjustment";
           transaction_date?: string;
           currency?: string;
