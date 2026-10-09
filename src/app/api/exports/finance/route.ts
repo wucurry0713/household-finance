@@ -37,10 +37,12 @@ type CategoryTotal = {
 
 type AnalyticsData = {
   month: string;
+  period: "month" | "six_months" | "year";
   filter: string;
   monthlyTotals: MonthlyTotal[];
   categories: CategoryTotal[];
   transactions: TransactionReportRow[];
+  totalExpenses: number;
 };
 
 const currencyFormat = '#,##0.00;[Red](#,##0.00);-';
@@ -50,11 +52,18 @@ function formatScope(scope: TransactionReportRow["scope"]) {
   return expenseScopeLabels[scope] ?? "個人";
 }
 
+function formatPeriod(period: AnalyticsData["period"]) {
+  if (period === "year") return "今年";
+  if (period === "six_months") return "近 6 個月";
+  return "本月";
+}
+
 function rowsForAnalytics(
   reportRows: TransactionReportRow[],
   currency: string,
   month: string,
   scope: ExpenseScopeFilter,
+  period: AnalyticsData["period"],
 ) {
   const startMonth = shiftMonthKey(month, -11);
   const scopedRows = reportRows.filter(
@@ -79,17 +88,26 @@ function rowsForAnalytics(
     return { month: monthKey, income, expenses, balance: income - expenses };
   });
 
-  const monthExpenses = scopedRows.filter(
-    (row) => row.kind === "expense" && row.date.slice(0, 7) === month,
+  const periodStart =
+    period === "year"
+      ? `${month.slice(0, 4)}-01`
+      : period === "six_months"
+        ? shiftMonthKey(month, -5)
+        : month;
+  const periodExpenses = scopedRows.filter(
+    (row) =>
+      row.kind === "expense" &&
+      row.date.slice(0, 7) >= periodStart &&
+      row.date.slice(0, 7) <= month,
   );
   const categoryBuckets = new Map<string, { amount: number; transactions: number }>();
-  for (const row of monthExpenses) {
+  for (const row of periodExpenses) {
     const bucket = categoryBuckets.get(row.category) ?? { amount: 0, transactions: 0 };
     bucket.amount += row.amount;
     bucket.transactions += 1;
     categoryBuckets.set(row.category, bucket);
   }
-  const totalExpenses = monthExpenses.reduce((sum, row) => sum + row.amount, 0);
+  const totalExpenses = periodExpenses.reduce((sum, row) => sum + row.amount, 0);
   const categories = [...categoryBuckets.entries()]
     .map(([category, item]) => ({
       category,
@@ -99,7 +117,7 @@ function rowsForAnalytics(
     }))
     .sort((a, b) => b.amount - a.amount);
 
-  return { scopedRows, monthlyTotals, categories, totalExpenses };
+  return { scopedRows, monthlyTotals, categories, totalExpenses, periodExpenses };
 }
 
 function styleSectionHeader(row: ExcelJS.Row) {
@@ -146,7 +164,8 @@ function createCsv(summary: ExportSummary, currency: string, analytics: Analytic
     ["支出分析統計"],
     ["分析月份", analytics.month],
     ["支出篩選", analytics.filter],
-    ["本月總支出", analytics.monthlyTotals.at(-1)?.expenses ?? 0, currency],
+    ["分析期間", formatPeriod(analytics.period)],
+    ["分析期間總支出", analytics.totalExpenses, currency],
     [],
     ["月度收支與結餘總覽"],
     ["月份", "收入", "支出", "結餘", "幣別"],
@@ -168,7 +187,7 @@ function createCsv(summary: ExportSummary, currency: string, analytics: Analytic
       currency,
     ]),
     [],
-    ["分析期間交易明細"],
+    ["分類交易明細"],
     ["日期", "類型", "費用歸屬", "分類", "金額", "幣別", "帳戶", "說明", "備註"],
     ...analytics.transactions.map((row) => [
       row.date,
@@ -226,8 +245,9 @@ function createWorkbook(
   styleSectionHeader(analysisSheet.getRow(1));
   analysisSheet.addRow(["分析月份", analytics.month]);
   analysisSheet.addRow(["支出篩選", analytics.filter]);
-  analysisSheet.addRow(["本月總支出", analytics.monthlyTotals.at(-1)?.expenses ?? 0, currency]);
-  analysisSheet.getCell("B4").numFmt = currencyFormat;
+  analysisSheet.addRow(["分析期間", formatPeriod(analytics.period)]);
+  analysisSheet.addRow(["分析期間總支出", analytics.totalExpenses, currency]);
+  analysisSheet.getCell("B5").numFmt = currencyFormat;
   analysisSheet.addRow([]);
 
   const monthlyHeading = analysisSheet.addRow(["月度收支與結餘總覽"]);
@@ -308,6 +328,11 @@ export async function GET(request: Request) {
     const month = normalizeMonthKey(params.get("month") ?? undefined);
     const requestedScope = params.get("expenseScope") ?? "all";
     const ownerId = params.get("ownerId");
+    const requestedPeriod = params.get("period");
+    const period: AnalyticsData["period"] =
+      requestedPeriod === "year" || requestedPeriod === "six_months"
+        ? requestedPeriod
+        : "month";
     const matchedScope = expenseScopes.find((scope) => scope === requestedScope);
     const expenseScope: ExpenseScopeFilter =
       requestedScope === "all" ? "all" : matchedScope ?? "all";
@@ -336,13 +361,27 @@ export async function GET(request: Request) {
     if (ownerId && !summary) {
       return Response.json({ error: "無權匯出此成員的財務資料。" }, { status: 403 });
     }
-    const analyticsRows = rowsForAnalytics(reportRows, currency, month, expenseScope);
+    const scopedReportRows = ownerId
+      ? reportRows.filter((row) => row.isJoint || row.ownerId === ownerId)
+      : reportRows;
+    const analyticsRows = rowsForAnalytics(
+      scopedReportRows,
+      currency,
+      month,
+      expenseScope,
+      period,
+    );
     const analytics: AnalyticsData = {
       month,
-      filter: expenseScope === "all" ? "全部支出" : expenseScopeLabels[expenseScope],
+      period,
+      filter: [
+        ownerId ? "個人" : "家庭",
+        expenseScope === "all" ? "全部支出" : expenseScopeLabels[expenseScope],
+      ].join(" · "),
       monthlyTotals: analyticsRows.monthlyTotals,
       categories: analyticsRows.categories,
-      transactions: analyticsRows.scopedRows,
+      transactions: analyticsRows.periodExpenses,
+      totalExpenses: analyticsRows.totalExpenses,
     };
     const exportSummary: ExportSummary = {
       bank: summary.accountAssets,

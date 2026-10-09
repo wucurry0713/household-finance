@@ -8,10 +8,12 @@ export function ExcelExportButton({
   month,
   expenseScope = "all",
   ownerId,
+  period = "month",
 }: {
   month?: string;
   expenseScope?: ExpenseScopeFilter;
   ownerId?: string | null;
+  period?: "month" | "six_months" | "year";
 }) {
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +22,7 @@ export function ExcelExportButton({
     setIsExporting(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ format, expenseScope });
+      const params = new URLSearchParams({ format, expenseScope, period });
       if (month) params.set("month", month);
       if (ownerId) params.set("ownerId", ownerId);
       const response = await fetch(`/api/exports/finance?${params.toString()}`);

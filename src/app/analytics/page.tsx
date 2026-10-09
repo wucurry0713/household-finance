@@ -56,6 +56,7 @@ export default async function AnalyticsPage({
           currency={household.base_currency}
           selectedMonth={selectedMonth}
           transactions={transactions}
+          userId={user.id}
         />
       </div>
     </main>

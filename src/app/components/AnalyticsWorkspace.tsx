@@ -1,7 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, ChartPie, TrendingUp } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  BadgeDollarSign,
+  Building2,
+  Bus,
+  ChartPie,
+  Droplets,
+  Flame,
+  Gift,
+  HeartPulse,
+  House,
+  Package,
+  ShoppingBasket,
+  Target,
+  TrendingUp,
+  Utensils,
+  Wallet,
+  Zap,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 
 import type { TransactionReportRow } from "@/lib/finance/transaction-report";
 import {
@@ -14,6 +35,17 @@ import { ExcelExportButton } from "@/app/components/ExcelExportButton";
 
 type Metric = "expense" | "income" | "balance";
 type Period = "month" | "six_months" | "year";
+type ViewMode = "personal" | "family";
+type CategorySummary = {
+  key: string;
+  name: string;
+  categoryId: string | null;
+  icon: string | null;
+  color: string;
+  amount: number;
+  percentage: number;
+  transactions: TransactionReportRow[];
+};
 
 const colors = [
   "#B8976C",
@@ -25,6 +57,33 @@ const colors = [
   "#DED2BD",
   "#B9A58A",
 ];
+
+const categoryIcons: Record<string, LucideIcon> = {
+  bus: Bus,
+  health: HeartPulse,
+  house: House,
+  shopping: ShoppingBasket,
+  utensils: Utensils,
+  wallet: Wallet,
+};
+
+function getCategoryIcon(icon: string | null, name: string): LucideIcon {
+  if (icon && categoryIcons[icon]) return categoryIcons[icon];
+  if (/中獎|發票/.test(name)) return Target;
+  if (/紅包|禮金/.test(name)) return Gift;
+  if (/二手售出/.test(name)) return Package;
+  if (/其他收入/.test(name)) return BadgeDollarSign;
+  if (/水費/.test(name)) return Droplets;
+  if (/電費/.test(name)) return Zap;
+  if (/天然氣/.test(name)) return Flame;
+  if (/管理費/.test(name)) return Building2;
+  if (/餐|飲食|咖啡/.test(name)) return Utensils;
+  if (/交通|通勤/.test(name)) return Bus;
+  if (/醫療|保險|健康/.test(name)) return HeartPulse;
+  if (/居家|房租|住房/.test(name)) return House;
+  if (/日用|購物|生活/.test(name)) return ShoppingBasket;
+  return Wallet;
+}
 
 function monthKey(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -54,14 +113,18 @@ export function AnalyticsWorkspace({
   transactions,
   currency,
   selectedMonth,
+  userId,
 }: {
   transactions: TransactionReportRow[];
   currency: string;
   selectedMonth: string;
+  userId: string;
 }) {
   const [metric, setMetric] = useState<Metric>("expense");
   const [period, setPeriod] = useState<Period>("month");
   const [scopeFilter, setScopeFilter] = useState<ExpenseScopeFilter>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("personal");
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string | null>(null);
   const currentMonth = selectedMonth;
   const previousMonth = shiftMonth(currentMonth, -1);
   const firstMonth =
@@ -73,6 +136,7 @@ export function AnalyticsWorkspace({
   const currencyTransactions = transactions.filter(
     (row) =>
       row.currency === currency &&
+      (viewMode === "family" || row.isJoint || row.ownerId === userId) &&
       (row.kind !== "expense" || scopeFilter === "all" || row.scope === scopeFilter),
   );
   const currentRows = currencyTransactions.filter(
@@ -88,34 +152,57 @@ export function AnalyticsWorkspace({
   const lastMonthAmount = metricAmount(lastMonthRows, metric);
   const monthChange = thisMonthAmount - lastMonthAmount;
 
-  const categories = (() => {
-    const values = new Map<string, { amount: number; categoryId: string | null }>();
-    for (const row of currentRows) {
-      if (metric !== "balance" && row.kind !== metric) continue;
-      const key = row.category || "未分類";
-      const bucket = values.get(key) ?? { amount: 0, categoryId: row.categoryId };
-      bucket.amount += metric === "balance" && row.kind === "expense" ? -row.amount : row.amount;
+  const expenseRows = currentRows.filter((row) => row.kind === "expense");
+  const expenseTotal = expenseRows.reduce((sum, row) => sum + row.amount, 0);
+  const categories: CategorySummary[] = (() => {
+    const values = new Map<string, CategorySummary>();
+    for (const row of expenseRows) {
+      const name = row.category || "未分類";
+      const key = `${row.categoryId ?? ""}:${name}`;
+      const bucket = values.get(key) ?? {
+        key,
+        name,
+        categoryId: row.categoryId,
+        icon: row.categoryIcon,
+        color: row.categoryColor || colors[values.size % colors.length],
+        amount: 0,
+        percentage: 0,
+        transactions: [],
+      };
+      bucket.amount += row.amount;
+      bucket.transactions.push(row);
       values.set(key, bucket);
     }
-    return [...values.entries()]
-      .map(([name, item]) => ({ name, ...item }))
-      .filter((item) => item.amount !== 0)
-      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+    return [...values.values()]
+      .map((item) => ({
+        ...item,
+        percentage: expenseTotal ? item.amount / expenseTotal : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
   })();
-
-  const categoryTotal = categories.reduce((sum, item) => sum + Math.abs(item.amount), 0);
-  const slices = categories.slice(0, 8);
-  const otherAmount = categories.slice(8).reduce((sum, item) => sum + Math.abs(item.amount), 0);
-  if (otherAmount > 0) slices.push({ name: "其他", amount: otherAmount, categoryId: null });
-  const sliceTotal = slices.reduce((sum, item) => sum + Math.abs(item.amount), 0);
-  const gradientParts = slices.map((slice, index) => {
-    const start =
-      slices
-        .slice(0, index)
-        .reduce((sum, item) => sum + (Math.abs(item.amount) / sliceTotal) * 100, 0);
-    const end = start + (Math.abs(slice.amount) / sliceTotal) * 100;
-    return `${colors[index % colors.length]} ${start}% ${end}%`;
-  });
+  const gradientParts: string[] = [];
+  let gradientPosition = 0;
+  for (const category of categories) {
+    const nextPosition = gradientPosition + category.percentage * 100;
+    gradientParts.push(`${category.color} ${gradientPosition}% ${nextPosition}%`);
+    gradientPosition = nextPosition;
+  }
+  const selectedCategory =
+    categories.find((category) => category.key === selectedCategoryKey) ?? null;
+  const SelectedCategoryIcon = selectedCategory
+    ? getCategoryIcon(selectedCategory.icon, selectedCategory.name)
+    : null;
+  const selectedCategoryRows = selectedCategory
+    ? [...selectedCategory.transactions].sort((a, b) => b.date.localeCompare(a.date))
+    : [];
+  const groupedCategoryRows = selectedCategoryRows.reduce<
+    { date: string; rows: TransactionReportRow[] }[]
+  >((groups, row) => {
+    const lastGroup = groups.at(-1);
+    if (lastGroup?.date === row.date) lastGroup.rows.push(row);
+    else groups.push({ date: row.date, rows: [row] });
+    return groups;
+  }, []);
   const monthlyKeys =
     period === "month"
       ? [previousMonth, currentMonth]
@@ -149,6 +236,10 @@ export function AnalyticsWorkspace({
     six_months: "近 6 個月",
     year: "今年",
   };
+  const viewLabels: Record<ViewMode, string> = {
+    personal: "個人",
+    family: "家庭",
+  };
 
   return (
     <div className="space-y-6">
@@ -158,7 +249,12 @@ export function AnalyticsWorkspace({
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">分析統計</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <ExcelExportButton expenseScope={scopeFilter} month={selectedMonth} />
+          <ExcelExportButton
+            expenseScope={scopeFilter}
+            month={selectedMonth}
+            ownerId={viewMode === "personal" ? userId : null}
+            period={period}
+          />
           {(["expense", "income", "balance"] as const).map((option) => (
             <button
               aria-pressed={metric === option}
@@ -191,6 +287,24 @@ export function AnalyticsWorkspace({
             type="button"
           >
             {periodLabels[option]}
+          </button>
+        ))}
+      </div>
+
+      <div aria-label="個人或家庭統計" className="flex w-fit gap-1 rounded-full bg-[#E8DEC9] p-1" role="group">
+        {(["personal", "family"] as const).map((option) => (
+          <button
+            aria-pressed={viewMode === option}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              viewMode === option
+                ? "bg-[#B8976C] text-white shadow-sm"
+                : "text-[#6B573F] hover:bg-white/60"
+            }`}
+            key={option}
+            onClick={() => setViewMode(option)}
+            type="button"
+          >
+            {viewLabels[option]}
           </button>
         ))}
       </div>
@@ -254,43 +368,58 @@ export function AnalyticsWorkspace({
           <div className="flex items-center gap-2">
             <ChartPie className="text-[#6B573F]" size={19} />
             <div>
-              <h2 className="font-semibold">分類金額占比</h2>
+              <h2 className="font-semibold">支出分類</h2>
               <p className="mt-1 text-xs text-[#8C827A]">
-                {periodLabels[period]}{metricLabels[metric]} · 百分比
+                {viewLabels[viewMode]} · {periodLabels[period]} · {scopeFilter === "all" ? "全部支出" : expenseScopeLabels[scopeFilter]}
               </p>
             </div>
           </div>
-          {slices.length ? (
-            <div className="mt-6 grid gap-6 sm:grid-cols-[minmax(9rem,0.9fr)_1.1fr] sm:items-center">
-              <div
-                aria-label="分類占比圓餅圖"
-                className="mx-auto aspect-square w-full max-w-52 rounded-full"
-                role="img"
-                style={{
-                  background:
-                    gradientParts.length > 0
-                      ? `conic-gradient(${gradientParts.join(", ")})`
-                      : "#E8DEC9",
-                }}
-              />
-              <ul className="space-y-3">
-                {slices.map((item, index) => (
-                  <li className="flex items-center justify-between gap-3 text-sm" key={item.name}>
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span
-                        aria-hidden="true"
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: colors[index % colors.length] }}
-                      />
-                      <span className="truncate text-[#8C827A]">{item.name}</span>
-                    </span>
-                    <span className="shrink-0 text-right font-medium text-[#2C2623]">
-                      {categoryTotal
-                        ? `${((Math.abs(item.amount) / categoryTotal) * 100).toFixed(1)}%`
-                        : "0%"}
-                    </span>
-                  </li>
-                ))}
+          {categories.length ? (
+            <div className="mt-6 grid gap-6 sm:grid-cols-[minmax(12rem,0.85fr)_1.15fr] sm:items-center">
+              <div className="relative mx-auto aspect-square w-full max-w-56">
+                <div
+                  aria-label={`分類支出圓環圖，總支出 ${formatMoney(expenseTotal, currency)}`}
+                  className="absolute inset-0 rounded-full"
+                  role="img"
+                  style={{ background: `conic-gradient(${gradientParts.join(", ")})` }}
+                />
+                <div className="absolute inset-[18%] flex flex-col items-center justify-center rounded-full bg-white text-center">
+                  <span className="text-xs text-[#8C827A]">總支出</span>
+                  <span className="mt-1 text-lg font-semibold tabular-nums text-[#2C2623]">
+                    {formatMoney(expenseTotal, currency)}
+                  </span>
+                </div>
+              </div>
+              <ul aria-label="支出分類明細" className="space-y-2">
+                {categories.map((item) => {
+                  const CategoryIcon = getCategoryIcon(item.icon, item.name);
+                  return (
+                    <li key={item.key}>
+                      <button
+                        className="flex w-full items-center gap-3 rounded-xl border border-[#EFECE6] bg-white px-3 py-3 text-left transition hover:border-[#D4C3A3] hover:bg-[#FBF9F5]"
+                        onClick={() => setSelectedCategoryKey(item.key)}
+                        type="button"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="grid size-10 shrink-0 place-items-center rounded-full"
+                          style={{ backgroundColor: `${item.color}22` }}
+                        >
+                          <CategoryIcon aria-hidden="true" color={item.color} size={19} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-[#2C2623]">{item.name}</span>
+                          <span className="mt-0.5 block text-xs tabular-nums text-[#8C827A]">
+                            {(item.percentage * 100).toFixed(1)}% · {item.transactions.length} 筆
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right text-sm font-semibold tabular-nums text-[#2C2623]">
+                          {formatMoney(item.amount, currency)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : (
@@ -309,6 +438,82 @@ export function AnalyticsWorkspace({
                 各月收入與支出金額，和上月增減見下方
               </p>
             </div>
+
+            {selectedCategory && (
+              <div
+                className="fixed inset-0 z-50 flex items-end justify-center bg-[#2C2623]/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+                onClick={(event) => {
+                  if (event.target === event.currentTarget) setSelectedCategoryKey(null);
+                }}
+              >
+                <section
+                  aria-labelledby="category-detail-title"
+                  aria-modal="true"
+                  className="max-h-[85dvh] w-full max-w-lg overflow-hidden rounded-t-3xl bg-[#FBF9F5] shadow-2xl sm:rounded-3xl"
+                  role="dialog"
+                >
+                  <header
+                    className="flex items-center gap-3 border-b border-[#EFECE6] px-5 py-4"
+                    style={{ borderTop: `4px solid ${selectedCategory.color}` }}
+                  >
+                    <span className="grid size-11 place-items-center rounded-full bg-white">
+                      {SelectedCategoryIcon && (
+                        <SelectedCategoryIcon
+                          aria-hidden="true"
+                          color={selectedCategory.color}
+                          size={21}
+                        />
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-lg font-semibold" id="category-detail-title">
+                        {selectedCategory.name}
+                      </h2>
+                      <p className="text-xs text-[#8C827A]">
+                        {selectedCategory.transactions.length} 筆 · {formatMoney(selectedCategory.amount, currency)}
+                      </p>
+                    </div>
+                    <button
+                      aria-label="關閉分類明細"
+                      className="grid size-9 place-items-center rounded-full text-[#8C827A] hover:bg-white"
+                      onClick={() => setSelectedCategoryKey(null)}
+                      type="button"
+                    >
+                      <X size={18} />
+                    </button>
+                  </header>
+                  <div className="max-h-[calc(85dvh-5rem)] overflow-y-auto px-5 py-4">
+                    {groupedCategoryRows.map((group) => (
+                      <section className="mb-5 last:mb-0" key={group.date}>
+                        <h3 className="mb-2 text-xs font-semibold text-[#8C827A]">{group.date}</h3>
+                        <ul className="divide-y divide-[#EFECE6] rounded-xl bg-white px-3">
+                          {group.rows.map((row, index) => (
+                            <li className="flex items-center gap-3 py-3" key={`${row.date}-${row.description}-${index}`}>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-[#2C2623]">
+                                  {row.description || row.category}
+                                </p>
+                                {row.notes && <p className="mt-0.5 truncate text-xs text-[#8C827A]">{row.notes}</p>}
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <p className="text-sm font-semibold tabular-nums text-[#2C2623]">
+                                  {formatMoney(row.amount, currency)}
+                                </p>
+                                <p className="mt-0.5 text-[11px] tabular-nums text-[#8C827A]">
+                                  {selectedCategory.amount
+                                    ? `${((row.amount / selectedCategory.amount) * 100).toFixed(1)}%`
+                                    : "0%"}
+                                </p>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            )}
           </div>
           <div className="mt-6 flex h-56 items-end gap-2 border-b border-[#EFECE6] pb-2 sm:gap-3">
             {monthlyTotals.map((item) => {

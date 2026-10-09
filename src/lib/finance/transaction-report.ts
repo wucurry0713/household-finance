@@ -12,6 +12,8 @@ type SplitRow = Database["public"]["Tables"]["transaction_splits"]["Row"];
 type CategoryLabel = {
   id: string;
   name: string;
+  icon: string | null;
+  color: string | null;
   parent_category_id?: string | null;
 };
 
@@ -19,10 +21,14 @@ export type TransactionReportRow = {
   date: string;
   kind: "income" | "expense";
   scope: StoredExpenseScope;
+  ownerId: string | null;
+  isJoint: boolean;
   amount: number;
   currency: string;
   category: string;
   categoryId: string | null;
+  categoryIcon: string | null;
+  categoryColor: string | null;
   account: string;
   description: string;
   notes: string;
@@ -47,6 +53,8 @@ async function loadAllTransactions(
     | "id"
     | "kind"
     | "scope"
+    | "owner_id"
+    | "is_joint"
     | "transaction_date"
     | "currency"
     | "description"
@@ -58,7 +66,7 @@ async function loadAllTransactions(
   for (let offset = 0; ; offset += pageSize) {
     let query = supabase
       .from("transactions")
-      .select("id, kind, scope, transaction_date, currency, description, notes, created_at")
+      .select("id, kind, scope, owner_id, is_joint, transaction_date, currency, description, notes, created_at")
       .eq("household_id", householdId)
       .in("kind", ["income", "expense"])
       .order("transaction_date", { ascending: true })
@@ -85,7 +93,7 @@ export async function loadTransactionReportRows(
     loadAllTransactions(supabase, householdId, sinceDate, untilDate),
     supabase
       .from("categories")
-      .select("id, name, parent_category_id, kind, household_id")
+      .select("id, name, parent_category_id, kind, household_id, icon, color")
       .or(`household_id.is.null,household_id.eq.${householdId}`),
   ]);
 
@@ -98,7 +106,7 @@ export async function loadTransactionReportRows(
     });
     const fallbackResult = await supabase
       .from("categories")
-      .select("id, name, kind, household_id")
+      .select("id, name, kind, household_id, icon, color")
       .or(`household_id.is.null,household_id.eq.${householdId}`);
     if (fallbackResult.error) {
       console.error("[finance report] categories fallback query failed; transactions will be uncategorized", {
@@ -195,12 +203,20 @@ export async function loadTransactionReportRows(
       date: transaction.transaction_date,
       kind: transaction.kind as "income" | "expense",
       scope: transaction.scope,
+      ownerId: transaction.owner_id,
+      isJoint: transaction.is_joint,
       amount: Number(split.amount),
       currency: transaction.currency,
       category: split.category_id
         ? categoryNames.get(split.category_id) ?? "未分類"
         : "未分類",
       categoryId: split.category_id,
+      categoryIcon: split.category_id
+        ? categoriesById.get(split.category_id)?.icon ?? null
+        : null,
+      categoryColor: split.category_id
+        ? categoriesById.get(split.category_id)?.color ?? null
+        : null,
       account,
       description: transaction.description,
       notes: [transaction.notes, split.note].filter(Boolean).join(" / "),
