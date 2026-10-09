@@ -326,7 +326,7 @@ export function QuickTransactionModal({
           <section
             aria-labelledby="quick-transaction-title"
             aria-modal="true"
-            className="max-h-[94dvh] w-full max-w-xl overflow-y-auto rounded-t-2xl bg-white px-5 pb-6 pt-4 shadow-2xl sm:rounded-2xl sm:px-7 sm:pb-7"
+            className="flex max-h-[94dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-2xl bg-white px-5 pt-4 shadow-2xl sm:rounded-2xl sm:px-7 sm:pb-0"
             role="dialog"
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#EFECE6] sm:hidden" />
@@ -372,14 +372,15 @@ export function QuickTransactionModal({
               ))}
             </div>
 
-            <form className="mt-5 space-y-5" onSubmit={submitTransaction}>
-              {initialTransaction && (
-                <input name="transaction_id" type="hidden" value={initialTransaction.id} />
-              )}
-              <input name="kind" type="hidden" value={kind} />
-              <input name="category_id" type="hidden" value={categoryId} />
+            <form className="mt-5 flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={submitTransaction}>
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pb-4 pr-1">
+                {initialTransaction && (
+                  <input name="transaction_id" type="hidden" value={initialTransaction.id} />
+                )}
+                <input name="kind" type="hidden" value={kind} />
+                <input name="category_id" type="hidden" value={categoryId} />
 
-              <label className="block rounded-xl border border-[#EFECE6] bg-white px-4 py-3">
+                <label className="block rounded-xl border border-[#EFECE6] bg-white px-4 py-3">
                 <span className="text-xs font-medium text-[#8C827A]">
                   金額 · {selectedAccount?.currency ?? accounts[0]?.currency ?? "TWD"}
                 </span>
@@ -400,15 +401,19 @@ export function QuickTransactionModal({
                     value={amount}
                   />
                 </span>
-              </label>
+                </label>
 
-              {kind !== "transfer" ? (
+                {kind !== "transfer" ? (
                 <div>
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-sm font-medium">分類</p>
                     <span className="text-xs text-[#8C827A]">可略過</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  <div
+                    aria-label="分類選擇"
+                    className="flex max-w-full gap-2 overflow-x-auto pb-2"
+                    role="group"
+                  >
                     {displayCategories.map(({ category, fallbackName }) => {
                       const name = category?.name ?? fallbackName ?? "";
                       const Icon = getCategoryIcon(name, category?.icon);
@@ -418,7 +423,7 @@ export function QuickTransactionModal({
                       return (
                         <button
                           aria-pressed={selected}
-                          className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs transition ${
+                          className={`flex h-16 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs transition ${
                             selected
                               ? "border-[#B8976C] bg-[#B8976C] text-white"
                               : "border-[#EFECE6] bg-white text-[#8C827A] hover:border-[#D4C3A3]"
@@ -442,7 +447,7 @@ export function QuickTransactionModal({
                     })}
                     {(kind === "expense" || kind === "income") && (
                       <button
-                        className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[#D4C3A3] bg-white px-2 py-2 text-xs font-medium text-[#6B573F] transition hover:bg-[#E8DEC9]"
+                        className="flex h-16 w-24 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[#D4C3A3] bg-white px-2 py-2 text-xs font-medium text-[#6B573F] transition hover:bg-[#E8DEC9]"
                         onClick={() => {
                           setCustomCategoryError(null);
                           setShowCustomCategory(true);
@@ -458,9 +463,9 @@ export function QuickTransactionModal({
                     <p className="mt-2 text-xs text-[#8C827A]">儲存時會自動加入家庭分類。</p>
                   )}
                 </div>
-              ) : null}
+                ) : null}
 
-              <div className="border-t border-[#EFECE6] pt-3">
+                <div className="border-t border-[#EFECE6] pt-3">
                 <button
                   aria-expanded={showMoreOptions}
                   className="text-sm font-medium text-[#8C827A] underline decoration-[#EFECE6] underline-offset-4 hover:text-[#6B573F]"
@@ -524,9 +529,9 @@ export function QuickTransactionModal({
                     )}
                   </>
                 )}
-              </div>
+                </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium">日期</span>
                   <input
@@ -549,15 +554,16 @@ export function QuickTransactionModal({
                     value={notes}
                   />
                 </label>
+                </div>
+
+                {state.error && (
+                  <p aria-live="polite" className="rounded-lg bg-[#fff0ed] px-3 py-2.5 text-sm text-[#9f3e2e]" role="alert">
+                    {state.error}
+                  </p>
+                )}
               </div>
 
-              {state.error && (
-                <p aria-live="polite" className="rounded-lg bg-[#fff0ed] px-3 py-2.5 text-sm text-[#9f3e2e]" role="alert">
-                  {state.error}
-                </p>
-              )}
-
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="sticky bottom-0 -mx-5 grid gap-2 border-t border-[#EFECE6] bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:-mx-7 sm:px-7 sm:pb-4">
                 {!initialTransaction && (
                   <button
                     className="flex h-11 items-center justify-center gap-2 rounded-lg border border-[#EFECE6] bg-white text-sm font-semibold text-[#6B573F] transition hover:bg-[#E8DEC9] disabled:opacity-60"
@@ -581,80 +587,80 @@ export function QuickTransactionModal({
                 </button>
               </div>
             </form>
-            {showCustomCategory && (kind === "expense" || kind === "income") && (
-              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#2C2623]/35 p-4">
-                <section
-                  aria-labelledby="custom-category-title"
-                  aria-modal="true"
-                  className="w-full max-w-sm rounded-2xl border border-[#EFECE6] bg-white p-5 shadow-xl"
-                  role="dialog"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold" id="custom-category-title">
-                      新增{kind === "income" ? "收入" : "支出"}分類
-                    </h3>
-                    <button
-                      aria-label="關閉自訂分類"
-                      className="grid size-9 place-items-center rounded-full text-[#8C827A] hover:bg-[#E8DEC9]"
-                      onClick={() => setShowCustomCategory(false)}
-                      type="button"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                  <form className="mt-4 space-y-4" onSubmit={saveCustomCategory}>
-                    <label className="block text-sm font-medium">
-                      分類名稱
-                      <input
-                        autoFocus
-                        className="mt-1.5 h-11 w-full rounded-lg border border-[#EFECE6] px-3 text-sm outline-none focus:border-[#B8976C]"
-                        maxLength={40}
-                        onChange={(event) => setCustomCategoryName(event.target.value)}
-                        placeholder={kind === "income" ? "例如：副業、退稅" : "例如：寵物用品"}
-                        required
-                        value={customCategoryName}
-                      />
-                    </label>
-                    <fieldset>
-                      <legend className="text-sm font-medium">選擇圖示</legend>
-                      <div className="mt-2 grid grid-cols-6 gap-2">
-                        {customCategoryIcons.map(({ key, label, icon: CategoryIcon }) => {
-                          return (
-                            <button
-                              aria-label={`選擇${label}圖示`}
-                              aria-pressed={customCategoryIcon === key}
-                              className={`grid size-10 place-items-center rounded-lg border ${
-                                customCategoryIcon === key
-                                  ? "border-[#B8976C] bg-[#E8DEC9] text-[#6B573F]"
-                                  : "border-[#EFECE6] text-[#8C827A]"
-                              }`}
-                              key={key}
-                              onClick={() => setCustomCategoryIcon(key)}
-                              type="button"
-                            >
-                              <CategoryIcon size={18} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </fieldset>
-                    {customCategoryError && (
-                      <p aria-live="polite" className="text-sm text-[#9f3e2e]" role="alert">
-                        {customCategoryError}
-                      </p>
-                    )}
-                    <button
-                      className="h-11 w-full rounded-lg bg-[#B8976C] text-sm font-semibold text-white hover:bg-[#A3835B] disabled:opacity-60"
-                      disabled={isSavingCustomCategory}
-                      type="submit"
-                    >
-                      {isSavingCustomCategory ? "儲存中…" : "儲存並選取分類"}
-                    </button>
-                  </form>
-                </section>
-              </div>
-            )}
           </section>
+          {showCustomCategory && (kind === "expense" || kind === "income") && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#2C2623]/35 p-4">
+              <section
+                aria-labelledby="custom-category-title"
+                aria-modal="true"
+                className="w-full max-w-sm rounded-2xl border border-[#EFECE6] bg-white p-5 shadow-xl"
+                role="dialog"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold" id="custom-category-title">
+                    新增{kind === "income" ? "收入" : "支出"}分類
+                  </h3>
+                  <button
+                    aria-label="關閉自訂分類"
+                    className="grid size-9 place-items-center rounded-full text-[#8C827A] hover:bg-[#E8DEC9]"
+                    onClick={() => setShowCustomCategory(false)}
+                    type="button"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <form className="mt-4 space-y-4" onSubmit={saveCustomCategory}>
+                  <label className="block text-sm font-medium">
+                    分類名稱
+                    <input
+                      autoFocus
+                      className="mt-1.5 h-11 w-full rounded-lg border border-[#EFECE6] px-3 text-sm outline-none focus:border-[#B8976C]"
+                      maxLength={40}
+                      onChange={(event) => setCustomCategoryName(event.target.value)}
+                      placeholder={kind === "income" ? "例如：副業、退稅" : "例如：寵物用品"}
+                      required
+                      value={customCategoryName}
+                    />
+                  </label>
+                  <fieldset>
+                    <legend className="text-sm font-medium">選擇圖示</legend>
+                    <div className="mt-2 grid grid-cols-6 gap-2">
+                      {customCategoryIcons.map(({ key, label, icon: CategoryIcon }) => {
+                        return (
+                          <button
+                            aria-label={`選擇${label}圖示`}
+                            aria-pressed={customCategoryIcon === key}
+                            className={`grid size-10 place-items-center rounded-lg border ${
+                              customCategoryIcon === key
+                                ? "border-[#B8976C] bg-[#E8DEC9] text-[#6B573F]"
+                                : "border-[#EFECE6] text-[#8C827A]"
+                            }`}
+                            key={key}
+                            onClick={() => setCustomCategoryIcon(key)}
+                            type="button"
+                          >
+                            <CategoryIcon size={18} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                  {customCategoryError && (
+                    <p aria-live="polite" className="text-sm text-[#9f3e2e]" role="alert">
+                      {customCategoryError}
+                    </p>
+                  )}
+                  <button
+                    className="h-11 w-full rounded-lg bg-[#B8976C] text-sm font-semibold text-white hover:bg-[#A3835B] disabled:opacity-60"
+                    disabled={isSavingCustomCategory}
+                    type="submit"
+                  >
+                    {isSavingCustomCategory ? "儲存中…" : "儲存並選取分類"}
+                  </button>
+                </form>
+              </section>
+            </div>
+          )}
         </div>
       )}
     </>

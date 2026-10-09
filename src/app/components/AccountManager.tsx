@@ -635,7 +635,7 @@ export function AccountManager({
   const [portfolioAccountId, setPortfolioAccountId] = useState<string | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const totalsByCurrency = accounts.reduce<Record<string, number>>((totals, account) => {
     totals[account.currency] = (totals[account.currency] ?? 0) + account.balance;
     return totals;
@@ -737,11 +737,11 @@ export function AccountManager({
                       <AccountIcon type={account.account_type} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                        <p className="truncate text-sm font-medium">{account.name}</p>
-                        <span className="text-xs text-[#8C827A]">{accountTypeLabels[account.account_type]}</span>
-                        {!account.is_shared && <span className="text-xs text-[#8C827A]">個人</span>}
-                      </div>
+                      <p className="truncate text-sm font-medium">{account.name}</p>
+                      <p className="mt-0.5 truncate text-xs text-[#8C827A]">
+                        {accountTypeLabels[account.account_type]}
+                        {!account.is_shared && " · 個人"}
+                      </p>
                     </div>
                   </div>
                   <div className="min-w-0 text-right font-mono tabular-nums">
