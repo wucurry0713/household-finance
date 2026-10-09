@@ -1,13 +1,13 @@
-export const expenseScopes = ["personal", "shared", "spouse", "family"] as const;
+export const expenseScopes = ["personal", "shared", "paid_for_spouse"] as const;
 
 export type ExpenseScope = (typeof expenseScopes)[number];
+export type StoredExpenseScope = ExpenseScope | "family";
 export type ExpenseScopeFilter = ExpenseScope | "all";
 
 export const expenseScopeLabels: Record<ExpenseScope, string> = {
-  personal: "個人獨享",
-  shared: "雙人共同支出",
-  spouse: "幫老婆代付",
-  family: "全家",
+  personal: "個人",
+  shared: "雙人",
+  paid_for_spouse: "我代付",
 };
 
 export function isExpenseScope(value: unknown): value is ExpenseScope {

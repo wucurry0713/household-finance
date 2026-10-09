@@ -264,13 +264,10 @@ export function RecentTransactions({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
                         {transaction.notes || transaction.description || (isTransfer ? "帳戶轉帳" : detail)}
-                        {transaction.kind === "expense" && transaction.scope !== "personal" && (
+                        {transaction.kind === "expense" &&
+                          (transaction.scope === "shared" || transaction.scope === "paid_for_spouse") && (
                           <span className="ml-2 inline-flex rounded-full bg-[#E8DEC9] px-2 py-0.5 align-middle text-[10px] font-medium text-[#6B573F]">
-                            {transaction.scope === "spouse"
-                              ? "代付·老婆"
-                              : transaction.scope === "shared"
-                                ? "雙人"
-                                : "家庭"}
+                            {transaction.scope === "paid_for_spouse" ? "我代付" : "雙人"}
                           </span>
                         )}
                       </p>

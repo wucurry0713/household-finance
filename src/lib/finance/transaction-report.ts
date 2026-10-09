@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database";
-import type { ExpenseScope } from "@/lib/finance/expense-scope";
+import type { StoredExpenseScope } from "@/lib/finance/expense-scope";
 
 type FinanceClient = SupabaseClient<Database>;
 type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
@@ -18,7 +18,7 @@ type CategoryLabel = {
 export type TransactionReportRow = {
   date: string;
   kind: "income" | "expense";
-  scope: ExpenseScope;
+  scope: StoredExpenseScope;
   amount: number;
   currency: string;
   category: string;

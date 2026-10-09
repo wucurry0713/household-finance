@@ -16,6 +16,7 @@ import {
   Gift,
   HeartPulse,
   HeartHandshake,
+  HandCoins,
   House,
   Package,
   Plus,
@@ -23,7 +24,6 @@ import {
   Target,
   Utensils,
   UserRound,
-  Venus,
   Wallet,
   Droplets,
   Zap,
@@ -41,7 +41,9 @@ import { defaultCategoryOptions } from "@/lib/finance/default-categories";
 import {
   expenseScopeLabels,
   expenseScopes,
+  isExpenseScope,
   type ExpenseScope,
+  type StoredExpenseScope,
 } from "@/lib/finance/expense-scope";
 import type { DashboardAccount } from "@/lib/finance/dashboard";
 import type { Database } from "@/types/database";
@@ -58,7 +60,7 @@ export type EditableTransaction = {
   categoryId: string | null;
   accountId: string | null;
   destinationAccountId: string | null;
-  scope: ExpenseScope;
+  scope: StoredExpenseScope;
 };
 
 const initialState: TransactionActionState = {
@@ -169,7 +171,11 @@ export function QuickTransactionModal({
   );
   const [date, setDate] = useState(initialTransaction?.transaction_date ?? getToday());
   const [notes, setNotes] = useState(initialTransaction?.notes ?? "");
-  const [scope, setScope] = useState<ExpenseScope>(initialTransaction?.scope ?? "personal");
+  const [scope, setScope] = useState<ExpenseScope>(
+    initialTransaction && isExpenseScope(initialTransaction.scope)
+      ? initialTransaction.scope
+      : "personal",
+  );
   const [state, setState] = useState(initialState);
   const [isPending, startTransition] = useTransition();
   const [showCustomCategory, setShowCustomCategory] = useState(false);
@@ -480,16 +486,14 @@ export function QuickTransactionModal({
                 {kind === "expense" && (
                   <fieldset>
                     <legend className="mb-2 text-sm font-medium">消費參與者</legend>
-                    <div aria-label="消費參與者" className="grid grid-cols-3 rounded-lg bg-[#E8DEC9] p-1" role="group">
+                    <div aria-label="費用歸屬" className="grid grid-cols-3 rounded-lg bg-[#E8DEC9] p-1" role="group">
                       {expenseScopes.map((option) => {
                         const Icon =
                           option === "personal"
                             ? UserRound
                             : option === "shared"
                               ? HeartHandshake
-                              : option === "spouse"
-                                ? Venus
-                                : House;
+                              : HandCoins;
                         return (
                           <button
                             aria-pressed={scope === option}
@@ -503,7 +507,7 @@ export function QuickTransactionModal({
                             type="button"
                           >
                             <Icon aria-hidden="true" size={15} />
-                            {option === "spouse" ? "老婆" : option === "personal" ? "個人" : expenseScopeLabels[option]}
+                            {expenseScopeLabels[option]}
                           </button>
                         );
                       })}

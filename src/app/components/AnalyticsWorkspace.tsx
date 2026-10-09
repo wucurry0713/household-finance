@@ -199,7 +199,12 @@ export function AnalyticsWorkspace({
         role="group"
       >
         {(["all", ...expenseScopes] as const).map((option) => {
-          const label = option === "all" ? "全部支出" : expenseScopeLabels[option];
+          const label =
+            option === "all"
+              ? "全部支出"
+              : option === "personal"
+                ? "個人真實純支出"
+                : expenseScopeLabels[option];
           return (
             <button
               aria-pressed={scopeFilter === option}
