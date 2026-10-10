@@ -14,7 +14,6 @@ export default function AnalyticsWorkspace({
   const supabase = createClient();
   const [filter, setFilter] = useState('this_month');
 
-  // 預設自訂日期區間：本月 1 號 ~ 今天
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   const firstDayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -32,23 +31,21 @@ export default function AnalyticsWorkspace({
   ];
 
   const fetchData = useCallback(async () => {
+    if (!householdId) return;
     setLoading(true);
     try {
-      let res;
+      let res: any[] = [];
       if (filter === 'custom') {
-        // 自訂模式：帶入開始與結束日期
         res = await loadAnalyticsTransactions(supabase, householdId, '', customStartDate, customEndDate);
       } else if (filter === 'this_month') {
-        // 本月模式：帶入頁面頂部選擇的 selectedMonth (例如 2026-10)
         const targetMonth = selectedMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         res = await loadAnalyticsTransactions(supabase, householdId, targetMonth);
       } else {
-        // 近 6 個月 或 今年 模式
         res = await loadAnalyticsTransactions(supabase, householdId, filter);
       }
       setTransactions(res || []);
     } catch (err) {
-      console.error(err);
+      console.error("載入分析數據失敗:", err);
     } finally {
       setLoading(false);
     }
@@ -58,20 +55,20 @@ export default function AnalyticsWorkspace({
     fetchData();
   }, [fetchData]);
 
-  // 計算總支出、總收入與分類統計
+  // 計算總支出與總收入
   const totalExpense = transactions
-    .filter((t) => t.kind === 'expense')
+    .filter((t) => t.kind === 'expense' || t.type === 'expense')
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
   const totalIncome = transactions
-    .filter((t) => t.kind === 'income')
+    .filter((t) => t.kind === 'income' || t.type === 'income')
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-  // 分類統計 (僅統計支出)
+  // 計算分類支出統計
   const categoryStats = transactions
-    .filter((t) => t.kind === 'expense')
+    .filter((t) => t.kind === 'expense' || t.type === 'expense')
     .reduce((acc: Record<string, number>, t) => {
-      const cat = t.category || '未分類';
+      const cat = t.category || t.category_name || '未分類';
       acc[cat] = (acc[cat] || 0) + (Number(t.amount) || 0);
       return acc;
     }, {});
@@ -80,17 +77,17 @@ export default function AnalyticsWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* 篩選切換區 */}
+      {/* 切換按鈕與日期選擇器 */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex rounded-lg bg-stone-100 p-1">
+        <div className="inline-flex rounded-xl bg-[#F0ECE1] p-1">
           {filterOptions.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setFilter(opt.value)}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                 filter === opt.value
-                  ? 'bg-white text-stone-800 shadow-sm'
-                  : 'text-stone-500 hover:text-stone-700'
+                  ? 'bg-white text-[#2C2623] shadow-sm'
+                  : 'text-[#8C827A] hover:text-[#2C2623]'
               }`}
             >
               {opt.label}
@@ -98,64 +95,63 @@ export default function AnalyticsWorkspace({
           ))}
         </div>
 
-        {/* 當選擇「自訂」時展開 Date Picker */}
         {filter === 'custom' && (
-          <div className="flex items-center gap-2 bg-stone-50 p-2 rounded-lg border border-stone-200 text-sm">
-            <label className="text-stone-600">開始：</label>
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[#E5E0D8] text-sm text-[#2C2623]">
+            <span className="text-[#8C827A]">開始：</span>
             <input
               type="date"
               value={customStartDate}
               onChange={(e) => setCustomStartDate(e.target.value)}
-              className="px-2 py-1 border border-stone-300 rounded bg-white text-stone-800"
+              className="bg-transparent focus:outline-none"
             />
-            <label className="text-stone-600 ml-2">結束：</label>
+            <span className="text-[#8C827A] ml-2">結束：</span>
             <input
               type="date"
               value={customEndDate}
               onChange={(e) => setCustomEndDate(e.target.value)}
-              className="px-2 py-1 border border-stone-300 rounded bg-white text-stone-800"
+              className="bg-transparent focus:outline-none"
             />
           </div>
         )}
       </div>
 
-      {/* 數據卡片區域 */}
+      {/* 數據內容卡片 */}
       {loading ? (
-        <div className="py-12 text-center text-stone-400">載入數據中...</div>
+        <div className="py-12 text-center text-[#8C827A]">載入分析數據中...</div>
       ) : (
         <div className="space-y-6">
-          {/* 數據總覽小卡 */}
+          {/* 總覽數字卡片 */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-stone-500">總支出</p>
-              <p className="mt-2 text-2xl font-bold text-rose-600">
+            <div className="rounded-2xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
+              <p className="text-sm font-medium text-[#8C827A]">總支出</p>
+              <p className="mt-2 text-3xl font-bold text-[#E54D42]">
                 ${totalExpense.toLocaleString()}
               </p>
             </div>
-            <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-stone-500">總收入</p>
-              <p className="mt-2 text-2xl font-bold text-emerald-600">
+            <div className="rounded-2xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
+              <p className="text-sm font-medium text-[#8C827A]">總收入</p>
+              <p className="mt-2 text-3xl font-bold text-[#2E7D32]">
                 ${totalIncome.toLocaleString()}
               </p>
             </div>
           </div>
 
-          {/* 分類支出排行榜 */}
-          <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-stone-800 mb-4">支出分類統計</h3>
+          {/* 支出分類統計排行榜 */}
+          <div className="rounded-2xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-[#2C2623] mb-5">支出分類統計</h3>
             {sortedCategories.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {sortedCategories.map(([cat, amount]) => {
                   const percentage = totalExpense > 0 ? ((amount / totalExpense) * 100).toFixed(1) : '0';
                   return (
-                    <div key={cat} className="space-y-1">
+                    <div key={cat} className="space-y-1.5">
                       <div className="flex justify-between text-sm">
-                        <span className="font-medium text-stone-700">{cat}</span>
-                        <span className="text-stone-600">${amount.toLocaleString()} ({percentage}%)</span>
+                        <span className="font-semibold text-[#2C2623]">{cat}</span>
+                        <span className="text-[#8C827A] font-medium">${amount.toLocaleString()} ({percentage}%)</span>
                       </div>
-                      <div className="h-2 w-full rounded-full bg-stone-100 overflow-hidden">
+                      <div className="h-2.5 w-full rounded-full bg-[#F5F2EC] overflow-hidden">
                         <div
-                          className="h-full bg-stone-700 rounded-full"
+                          className="h-full bg-[#2C2623] rounded-full transition-all duration-500"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
@@ -164,7 +160,7 @@ export default function AnalyticsWorkspace({
                 })}
               </div>
             ) : (
-              <div className="text-stone-400 py-4 text-center">該區間內尚無支出資料</div>
+              <div className="text-[#8C827A] py-8 text-center font-medium">該區間內尚無支出資料</div>
             )}
           </div>
         </div>
