@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MonthSelector } from './MonthSelector';
 
 interface AnalyticsWorkspaceProps {
   householdId: string;
@@ -10,36 +11,46 @@ interface AnalyticsWorkspaceProps {
 
 export default function AnalyticsWorkspace({
   householdId,
-  selectedMonth,
+  selectedMonth = '',
   initialTransactions = [],
 }: AnalyticsWorkspaceProps) {
   const [transactions] = useState<any[]>(initialTransactions);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // 相容判斷：支援 kind 或 type
-  const isExpense = (t: any) => t.kind === 'expense' || t.type === 'expense';
-  const isIncome = (t: any) => t.kind === 'income' || t.type === 'income';
+  // 篩選狀態：all (全部), personal (個人), joint (家庭)
+  const [memberFilter, setMemberFilter] = useState<'all' | 'personal' | 'joint'>('all');
+
+  // 判斷支出與收入
+  const isExpense = (t: any) => t.kind === 'expense';
+  const isIncome = (t: any) => t.kind === 'income';
 
   const getAmount = (t: any) => {
-    const val = t.amount !== undefined ? t.amount : t.price;
+    const val = t.amount;
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  const totalExpense = transactions
+  // 根據成員/雙人篩選交易
+  const filteredTransactions = transactions.filter((t) => {
+    if (memberFilter === 'personal') return t.is_joint === false;
+    if (memberFilter === 'joint') return t.is_joint === true;
+    return true;
+  });
+
+  const totalExpense = filteredTransactions
     .filter(isExpense)
     .reduce((sum, t) => sum + getAmount(t), 0);
 
-  const totalIncome = transactions
+  const totalIncome = filteredTransactions
     .filter(isIncome)
     .reduce((sum, t) => sum + getAmount(t), 0);
 
   const balance = totalIncome - totalExpense;
 
-  // 分類統計
-  const categoryStats = transactions
+  // 分類統計：正確讀取 categoryName
+  const categoryStats = filteredTransactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
-      const cat = t.category || t.category_name || '未分類';
+      const cat = t.categoryName || t.category_name || t.category || '未分類';
       acc[cat] = (acc[cat] || 0) + getAmount(t);
       return acc;
     }, {});
@@ -47,13 +58,52 @@ export default function AnalyticsWorkspace({
   const sortedCategories = Object.entries(categoryStats).sort((a, b) => b[1] - a[1]);
 
   const categoryTransactions = selectedCategory
-    ? transactions.filter(
-        (t) => isExpense(t) && (t.category || t.category_name || '未分類') === selectedCategory
+    ? filteredTransactions.filter(
+        (t) => isExpense(t) && (t.categoryName || t.category_name || t.category || '未分類') === selectedCategory
       )
     : [];
 
   return (
-    <div className="space-y-6 mt-6">
+    <div className="space-y-6">
+      {/* 頂部列：月份選擇與篩選器 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-3xl border border-[#E5E0D8] shadow-sm">
+        <MonthSelector month={selectedMonth} />
+
+        {/* 個人 / 家庭 / 全部篩選切換 */}
+        <div className="flex items-center bg-[#F5F2EC] p-1 rounded-2xl border border-[#E5E0D8]">
+          <button
+            onClick={() => setMemberFilter('all')}
+            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+              memberFilter === 'all'
+                ? 'bg-[#2C2623] text-white shadow-sm'
+                : 'text-[#8C827A] hover:text-[#2C2623]'
+            }`}
+          >
+            全部
+          </button>
+          <button
+            onClick={() => setMemberFilter('personal')}
+            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+              memberFilter === 'personal'
+                ? 'bg-[#2C2623] text-white shadow-sm'
+                : 'text-[#8C827A] hover:text-[#2C2623]'
+            }`}
+          >
+            👤 個人
+          </button>
+          <button
+            onClick={() => setMemberFilter('joint')}
+            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+              memberFilter === 'joint'
+                ? 'bg-[#2C2623] text-white shadow-sm'
+                : 'text-[#8C827A] hover:text-[#2C2623]'
+            }`}
+          >
+            🏠 家庭雙人
+          </button>
+        </div>
+      </div>
+
       {/* 頂部總覽區：高質感厚圓環甜甜圈圖與金額卡片 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* 左側：精美厚圓環甜甜圈圖 */}
@@ -83,7 +133,7 @@ export default function AnalyticsWorkspace({
               </p>
             </div>
             <div className="mt-4 text-xs text-[#8C827A]">
-              佔總流水比例：{totalIncome > 0 ? ((totalExpense / (totalIncome + totalExpense)) * 100).toFixed(1) : '100'}%
+              佔總流水比例：{totalIncome + totalExpense > 0 ? ((totalExpense / (totalIncome + totalExpense)) * 100).toFixed(1) : '100'}%
             </div>
           </div>
 
@@ -139,7 +189,7 @@ export default function AnalyticsWorkspace({
             })}
           </div>
         ) : (
-          <div className="text-[#8C827A] py-12 text-center font-medium">該區間內尚無支出資料</div>
+          <div className="text-[#8C827A] py-12 text-center font-medium">該篩選區間內尚無支出資料</div>
         )}
       </div>
 
@@ -169,8 +219,11 @@ export default function AnalyticsWorkspace({
                   return (
                     <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-[#2C2623] text-sm">{t.title || t.name || '未命名交易'}</p>
-                        <p className="text-xs text-[#8C827A] mt-0.5">{t.date || t.created_at?.split('T')[0]}</p>
+                        {/* 修正：正確顯示項目的備註/標題、帳戶或項目名稱 */}
+                        <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.description || t.accountName || '一般支出'}</p>
+                        <p className="text-xs text-[#8C827A] mt-0.5">
+                          {t.transaction_date || t.date || t.created_at?.split('T')[0]} {t.is_joint ? '• 🏠 家庭' : '• 👤 個人'}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-[#E54D42]">${amt.toLocaleString()}</p>
