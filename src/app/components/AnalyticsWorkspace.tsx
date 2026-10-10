@@ -23,6 +23,9 @@ export default function AnalyticsWorkspace({
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // 彈窗狀態：用來點擊分類時顯示該分類的詳細交易明細
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
   const filterOptions = [
     { label: '本月', value: 'this_month' },
     { label: '近 6 個月', value: 'last_six_months' },
@@ -43,8 +46,6 @@ export default function AnalyticsWorkspace({
       } else {
         res = await loadAnalyticsTransactions(supabase, householdId, filter);
       }
-      
-      console.log("分析頁面取得資料：", res);
       setTransactions(res || []);
     } catch (err) {
       console.error("載入分析數據失敗:", err);
@@ -57,17 +58,15 @@ export default function AnalyticsWorkspace({
     fetchData();
   }, [fetchData]);
 
-  // 相容判斷：Kind 或 Type
+  // 相容判斷
   const isExpense = (t: any) => t.kind === 'expense' || t.type === 'expense';
   const isIncome = (t: any) => t.kind === 'income' || t.type === 'income';
 
-  // 取得金額數值
   const getAmount = (t: any) => {
     const val = t.amount !== undefined ? t.amount : t.price;
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 計算總支出與總收入
   const totalExpense = transactions
     .filter(isExpense)
     .reduce((sum, t) => sum + getAmount(t), 0);
@@ -76,7 +75,7 @@ export default function AnalyticsWorkspace({
     .filter(isIncome)
     .reduce((sum, t) => sum + getAmount(t), 0);
 
-  // 計算分類支出統計
+  // 分類統計
   const categoryStats = transactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
@@ -87,11 +86,18 @@ export default function AnalyticsWorkspace({
 
   const sortedCategories = Object.entries(categoryStats).sort((a, b) => b[1] - a[1]);
 
+  // 取得點擊分類底下的所有明細
+  const categoryTransactions = selectedCategory
+    ? transactions.filter(
+        (t) => isExpense(t) && (t.category || t.category_name || '未分類') === selectedCategory
+      )
+    : [];
+
   return (
     <div className="space-y-6">
-      {/* 切換按鈕與日期選擇器 */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex rounded-xl bg-[#F0ECE1] p-1">
+      {/* 頂部篩選切換區 */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="inline-flex rounded-xl bg-[#F0ECE1] p-1 shadow-inner">
           {filterOptions.map((opt) => (
             <button
               key={opt.value}
@@ -108,7 +114,7 @@ export default function AnalyticsWorkspace({
         </div>
 
         {filter === 'custom' && (
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[#E5E0D8] text-sm text-[#2C2623]">
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[#E5E0D8] text-sm text-[#2C2623] shadow-sm">
             <span className="text-[#8C827A]">開始：</span>
             <input
               type="date"
@@ -127,43 +133,88 @@ export default function AnalyticsWorkspace({
         )}
       </div>
 
-      {/* 數據內容卡片 */}
       {loading ? (
-        <div className="py-12 text-center text-[#8C827A]">載入分析數據中...</div>
+        <div className="py-16 text-center text-[#8C827A] font-medium">載入分析數據中...</div>
       ) : (
         <div className="space-y-6">
-          {/* 總覽數字卡片 */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
-              <p className="text-sm font-medium text-[#8C827A]">總支出</p>
-              <p className="mt-2 text-3xl font-bold text-[#E54D42]">
-                ${totalExpense.toLocaleString()}
-              </p>
+          {/* 頂部總覽區：仿甜甜圈圖表與金額卡片 */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* 左側：甜甜圈總支出預覽卡片 */}
+            <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
+              <div className="absolute top-4 left-6 text-sm font-semibold text-[#8C827A]">總支出佔比概覽</div>
+              <div className="my-6 relative flex items-center justify-center">
+                {/* 甜甜圈圓餅圖裝飾外圈 */}
+                <div className="w-36 h-36 rounded-full border-8 border-[#F5F2EC] border-t-[#2C2623] border-r-[#8C827A] flex flex-col items-center justify-center shadow-inner">
+                  <span className="text-xs text-[#8C827A] font-medium">總支出</span>
+                  <span className="text-xl font-bold text-[#2C2623] mt-0.5">
+                    ${totalExpense.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between w-full px-4 text-xs text-[#8C827A] border-t border-[#F5F2EC] pt-4">
+                <span>總收入: <strong className="text-[#2E7D32]">${totalIncome.toLocaleString()}</strong></span>
+                <span>結餘: <strong className="text-[#2C2623]">${(totalIncome - totalExpense).toLocaleString()}</strong></span>
+              </div>
             </div>
-            <div className="rounded-2xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
-              <p className="text-sm font-medium text-[#8C827A]">總收入</p>
-              <p className="mt-2 text-3xl font-bold text-[#2E7D32]">
-                ${totalIncome.toLocaleString()}
-              </p>
+
+            {/* 右側：總支出與總收入大卡 */}
+            <div className="lg:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#8C827A]">本期總支出</p>
+                  <p className="mt-3 text-3xl font-extrabold text-[#E54D42]">
+                    ${totalExpense.toLocaleString()}
+                  </p>
+                </div>
+                <div className="mt-4 text-xs text-[#8C827A]">
+                  佔總流水比例：{totalIncome > 0 ? ((totalExpense / (totalIncome + totalExpense)) * 100).toFixed(1) : '100'}%
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#8C827A]">本期總收入</p>
+                  <p className="mt-3 text-3xl font-extrabold text-[#2E7D32]">
+                    ${totalIncome.toLocaleString()}
+                  </p>
+                </div>
+                <div className="mt-4 text-xs text-[#8C827A]">
+                  淨收支：<span className={totalIncome - totalExpense >= 0 ? "text-[#2E7D32] font-bold" : "text-[#E54D42] font-bold"}>
+                    ${(totalIncome - totalExpense).toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* 支出分類統計排行榜 */}
-          <div className="rounded-2xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-[#2C2623] mb-5">支出分類統計</h3>
+          {/* 分類百分比列表與進度條（點擊可開彈窗檢視明細） */}
+          <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-[#2C2623]">支出分類統計與佔比</h3>
+              <span className="text-xs text-[#8C827A]">點擊分類可檢視該項目交易明細</span>
+            </div>
+
             {sortedCategories.length > 0 ? (
               <div className="space-y-4">
                 {sortedCategories.map(([cat, amount]) => {
                   const percentage = totalExpense > 0 ? ((amount / totalExpense) * 100).toFixed(1) : '0';
                   return (
-                    <div key={cat} className="space-y-1.5">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-semibold text-[#2C2623]">{cat}</span>
-                        <span className="text-[#8C827A] font-medium">${amount.toLocaleString()} ({percentage}%)</span>
+                    <div
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className="group p-3 rounded-2xl transition-all hover:bg-[#FBF9F5] cursor-pointer border border-transparent hover:border-[#E5E0D8]"
+                    >
+                      <div className="flex justify-between text-sm mb-1.5">
+                        <span className="font-bold text-[#2C2623] group-hover:text-[#C88A32] transition-colors">
+                          📂 {cat}
+                        </span>
+                        <span className="text-[#2C2623] font-semibold">
+                          {percentage}% <span className="text-[#8C827A] font-normal ml-1">(${amount.toLocaleString()})</span>
+                        </span>
                       </div>
-                      <div className="h-2.5 w-full rounded-full bg-[#F5F2EC] overflow-hidden">
+                      <div className="h-3 w-full rounded-full bg-[#F5F2EC] overflow-hidden">
                         <div
-                          className="h-full bg-[#2C2623] rounded-full transition-all duration-500"
+                          className="h-full bg-[#2C2623] group-hover:bg-[#C88A32] rounded-full transition-all duration-500"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
@@ -172,8 +223,65 @@ export default function AnalyticsWorkspace({
                 })}
               </div>
             ) : (
-              <div className="text-[#8C827A] py-8 text-center font-medium">該區間內尚無支出資料</div>
+              <div className="text-[#8C827A] py-12 text-center font-medium">該區間內尚無支出資料</div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 點擊分類彈出交易明細 Modal (CategoryDetailModal) */}
+      {selectedCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#E5E0D8] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* 彈窗標題 */}
+            <div className="p-6 border-b border-[#E5E0D8] flex items-center justify-between bg-[#FBF9F5]">
+              <div>
+                <h3 className="text-lg font-bold text-[#2C2623]">📁 {selectedCategory} - 交易明細</h3>
+                <p className="text-xs text-[#8N827A] mt-0.5">該分類下所有的花費紀錄與佔比</p>
+              </div>
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className="w-9 h-9 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center text-[#8C827A] hover:text-[#2C2623] hover:bg-[#F5F2EC] transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 彈窗內容列表 */}
+            <div className="p-6 overflow-y-auto space-y-3 flex-1">
+              {categoryTransactions.length > 0 ? (
+                categoryTransactions.map((t, idx) => {
+                  const amt = getAmount(t);
+                  const catTotal = categoryStats[selectedCategory] || 1;
+                  const itemPct = ((amt / catTotal) * 100).toFixed(1);
+                  return (
+                    <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-[#2C2623] text-sm">{t.title || t.name || '未命名交易'}</p>
+                        <p className="text-xs text-[#8C827A] mt-0.5">{t.date || t.created_at?.split('T')[0]}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-[#E54D42]">${amt.toLocaleString()}</p>
+                        <p className="text-xs text-[#8C827A]">佔分類 {itemPct}%</p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-12 text-center text-[#8C827A]">此分類尚無明細資料</div>
+              )}
+            </div>
+
+            {/* 彈窗底部 */}
+            <div className="p-4 border-t border-[#E5E0D8] bg-[#FBF9F5] flex justify-between items-center text-sm">
+              <span className="text-[#8C827A]">分類總計：<strong className="text-[#2C2623]">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong></span>
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className="px-5 py-2 bg-[#2C2623] text-white rounded-xl font-medium hover:bg-black transition-all"
+              >
+                關閉
+              </button>
+            </div>
           </div>
         </div>
       )}
