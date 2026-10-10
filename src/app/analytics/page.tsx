@@ -35,13 +35,30 @@ export default async function AnalyticsPage({
     .single();
 
   const userProfile = profile as { household_id?: string; display_name?: string } | null;
-
   const householdId = userProfile?.household_id || "";
   const displayName =
     userProfile?.display_name ||
     user.user_metadata?.display_name ||
     user.email?.split("@")[0] ||
     "家庭成員";
+
+  // 在伺服器端直接以該月份撈取資料（跟總覽頁完全一致的邏輯）
+  const startDate = `${selectedMonth}-01`;
+  const [year, m] = selectedMonth.split('-').map(Number);
+  const lastDay = new Date(year, m, 0).getDate();
+  const endDate = `${selectedMonth}-${lastDay}`;
+
+  let transactions: any[] = [];
+  if (householdId) {
+    const { data } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("household_id", householdId)
+      .gte("date", startDate)
+      .lte("date", endDate);
+
+    transactions = data || [];
+  }
 
   return (
     <main className="min-h-screen bg-[#FBF9F5] text-[#2C2623]">
@@ -55,6 +72,7 @@ export default async function AnalyticsPage({
         <AnalyticsWorkspace
           householdId={householdId}
           selectedMonth={selectedMonth}
+          initialTransactions={transactions}
         />
       </div>
     </main>
