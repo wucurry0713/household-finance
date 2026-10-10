@@ -43,6 +43,8 @@ export default function AnalyticsWorkspace({
       } else {
         res = await loadAnalyticsTransactions(supabase, householdId, filter);
       }
+      
+      console.log("分析頁面取得資料：", res);
       setTransactions(res || []);
     } catch (err) {
       console.error("載入分析數據失敗:", err);
@@ -55,21 +57,31 @@ export default function AnalyticsWorkspace({
     fetchData();
   }, [fetchData]);
 
+  // 相容判斷：Kind 或 Type
+  const isExpense = (t: any) => t.kind === 'expense' || t.type === 'expense';
+  const isIncome = (t: any) => t.kind === 'income' || t.type === 'income';
+
+  // 取得金額數值
+  const getAmount = (t: any) => {
+    const val = t.amount !== undefined ? t.amount : t.price;
+    return typeof val === 'number' ? val : parseFloat(val) || 0;
+  };
+
   // 計算總支出與總收入
   const totalExpense = transactions
-    .filter((t) => t.kind === 'expense' || t.type === 'expense')
-    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    .filter(isExpense)
+    .reduce((sum, t) => sum + getAmount(t), 0);
 
   const totalIncome = transactions
-    .filter((t) => t.kind === 'income' || t.type === 'income')
-    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    .filter(isIncome)
+    .reduce((sum, t) => sum + getAmount(t), 0);
 
   // 計算分類支出統計
   const categoryStats = transactions
-    .filter((t) => t.kind === 'expense' || t.type === 'expense')
+    .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
       const cat = t.category || t.category_name || '未分類';
-      acc[cat] = (acc[cat] || 0) + (Number(t.amount) || 0);
+      acc[cat] = (acc[cat] || 0) + getAmount(t);
       return acc;
     }, {});
 
