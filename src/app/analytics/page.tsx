@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { AnalyticsWorkspace } from "@/app/components/AnalyticsWorkspace";
+import AnalyticsWorkspace from "@/app/components/AnalyticsWorkspace";
 import { AppHeader } from "@/app/components/AppHeader";
 import { MonthSelector } from "@/app/components/MonthSelector";
 import { loadAnalyticsTransactions } from "@/lib/finance/analytics";
@@ -52,12 +52,11 @@ export default async function AnalyticsPage({
       <AppHeader currentPage="analytics" displayName={displayName} month={selectedMonth} />
       <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl sm:px-8 sm:py-14">
         <MonthSelector month={selectedMonth} />
-        <AnalyticsWorkspace
-          currency={household.base_currency}
-          selectedMonth={selectedMonth}
-          transactions={transactions}
-          userId={user.id}
-        />
+{/* 正確的寫法 */}
+<AnalyticsWorkspace
+  supabase={supabase}
+  householdId={householdId}
+/>
       </div>
     </main>
   );
