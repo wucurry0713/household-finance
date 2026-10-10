@@ -4,7 +4,6 @@ import { AppHeader } from "../components/AppHeader";
 import { MonthSelector } from "../components/MonthSelector";
 import AnalyticsWorkspace from "../components/AnalyticsWorkspace";
 
-// 強制此頁面為動態渲染，防止 Vercel 打包時因為抓不到 Request Context / Env 造成 Prerender 錯誤
 export const dynamic = 'force-dynamic';
 
 export default async function AnalyticsPage({

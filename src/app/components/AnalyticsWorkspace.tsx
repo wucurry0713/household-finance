@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { loadAnalyticsTransactions } from "@/lib/finance/analytics";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AnalyticsWorkspace({
@@ -33,40 +34,23 @@ export default function AnalyticsWorkspace({
     { label: '自訂', value: 'custom' },
   ];
 
-  // 直接從 Supabase transactions 表格撈取資料，確保 100% 抓得到真實數據
   const fetchData = useCallback(async () => {
     if (!householdId) return;
     setLoading(true);
     try {
-      let query = supabase
-        .from('transactions')
-        .select('*')
-        .eq('household_id', householdId);
-
+      let res: any[] = [];
       const targetMonth = selectedMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      if (filter === 'this_month') {
-        const startDate = `${targetMonth}-01`;
-        const [year, month] = targetMonth.split('-').map(Number);
-        const lastDay = new Date(year, month, 0).getDate();
-        const endDate = `${targetMonth}-${lastDay}`;
-        query = query.gte('date', startDate).lte('date', endDate);
-      } else if (filter === 'custom') {
-        query = query.gte('date', appliedStartDate).lte('date', appliedEndDate);
-      } else if (filter === 'this_year') {
-        const yearStart = `${now.getFullYear()}-01-01`;
-        const yearEnd = `${now.getFullYear()}-12-31`;
-        query = query.gte('date', yearStart).lte('date', yearEnd);
+      if (filter === 'custom') {
+        res = await loadAnalyticsTransactions(supabase, householdId, '', appliedStartDate, appliedEndDate);
+      } else if (filter === 'this_month') {
+        res = await loadAnalyticsTransactions(supabase, householdId, targetMonth);
+      } else {
+        res = await loadAnalyticsTransactions(supabase, householdId, filter);
       }
 
-      const { data, error } = await query;
-      if (error) {
-        console.error("Supabase 查詢錯誤:", error);
-        setTransactions([]);
-      } else {
-        console.log("前端直接取得真實交易資料：", data);
-        setTransactions(data || []);
-      }
+      console.log("分析頁面載入資料成功：", res);
+      setTransactions(res || []);
     } catch (err) {
       console.error("載入分析數據失敗:", err);
       setTransactions([]);
@@ -113,7 +97,7 @@ export default function AnalyticsWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* 頂部篩選與自訂日期 */}
+      {/* 頂部篩選切換區 */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="inline-flex rounded-xl bg-[#F0ECE1] p-1 shadow-inner">
           {filterOptions.map((opt) => (
@@ -161,10 +145,10 @@ export default function AnalyticsWorkspace({
       </div>
 
       {loading ? (
-        <div className="py-16 text-center text-[#8C827A] font-medium">載入真實分析數據中...</div>
+        <div className="py-16 text-center text-[#8C827A] font-medium">載入分析數據中...</div>
       ) : (
         <div className="space-y-6">
-          {/* 總覽區：高質感圓餅圖與金額卡片 */}
+          {/* 頂部總覽區：高質感圓餅圖與金額卡片 */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
               <div className="absolute top-4 left-6 text-sm font-semibold text-[#8C827A]">總支出佔比概覽</div>
@@ -185,7 +169,7 @@ export default function AnalyticsWorkspace({
             <div className="lg:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col justify-between">
                 <div>
-                  <p className="text-sm font-medium text-[#8N827A]">本期總支出</p>
+                  <p className="text-sm font-medium text-[#8C827A]">本期總支出</p>
                   <p className="mt-3 text-3xl font-extrabold text-[#E54D42]">
                     ${totalExpense.toLocaleString()}
                   </p>
