@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { loadAnalyticsTransactions } from "@/lib/finance/analytics";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AnalyticsWorkspace({
@@ -20,8 +19,6 @@ export default function AnalyticsWorkspace({
 
   const [customStartDate, setCustomStartDate] = useState(firstDayStr);
   const [customEndDate, setCustomEndDate] = useState(todayStr);
-
-  // 實際生效的自訂日期（點擊確認按鈕後才更新）
   const [appliedStartDate, setAppliedStartDate] = useState(firstDayStr);
   const [appliedEndDate, setAppliedEndDate] = useState(todayStr);
 
@@ -36,22 +33,40 @@ export default function AnalyticsWorkspace({
     { label: '自訂', value: 'custom' },
   ];
 
+  // 直接從 Supabase transactions 表格撈取資料，確保 100% 抓得到真實數據
   const fetchData = useCallback(async () => {
     if (!householdId) return;
     setLoading(true);
     try {
-      let res: any[] = [];
-      if (filter === 'custom') {
-        res = await loadAnalyticsTransactions(supabase, householdId, '', appliedStartDate, appliedEndDate);
-      } else if (filter === 'this_month') {
-        const targetMonth = selectedMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        res = await loadAnalyticsTransactions(supabase, householdId, targetMonth);
-      } else {
-        res = await loadAnalyticsTransactions(supabase, householdId, filter);
+      let query = supabase
+        .from('transactions')
+        .select('*')
+        .eq('household_id', householdId);
+
+      const targetMonth = selectedMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      if (filter === 'this_month') {
+        const startDate = `${targetMonth}-01`;
+        const [year, month] = targetMonth.split('-').map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${targetMonth}-${lastDay}`;
+        query = query.gte('date', startDate).lte('date', endDate);
+      } else if (filter === 'custom') {
+        query = query.gte('date', appliedStartDate).lte('date', appliedEndDate);
+      } else if (filter === 'this_year') {
+        const yearStart = `${now.getFullYear()}-01-01`;
+        const yearEnd = `${now.getFullYear()}-12-31`;
+        query = query.gte('date', yearStart).lte('date', yearEnd);
       }
-      
-      console.log("分析頁面真實取得資料：", res);
-      setTransactions(res || []);
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("Supabase 查詢錯誤:", error);
+        setTransactions([]);
+      } else {
+        console.log("前端直接取得真實交易資料：", data);
+        setTransactions(data || []);
+      }
     } catch (err) {
       console.error("載入分析數據失敗:", err);
       setTransactions([]);
@@ -64,7 +79,6 @@ export default function AnalyticsWorkspace({
     fetchData();
   }, [fetchData]);
 
-  // 相容判斷：支援 kind 或 type
   const isExpense = (t: any) => t.kind === 'expense' || t.type === 'expense';
   const isIncome = (t: any) => t.kind === 'income' || t.type === 'income';
 
@@ -81,7 +95,6 @@ export default function AnalyticsWorkspace({
     .filter(isIncome)
     .reduce((sum, t) => sum + getAmount(t), 0);
 
-  // 分類統計
   const categoryStats = transactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
@@ -100,7 +113,7 @@ export default function AnalyticsWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* 頂部篩選切換區 */}
+      {/* 頂部篩選與自訂日期 */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="inline-flex rounded-xl bg-[#F0ECE1] p-1 shadow-inner">
           {filterOptions.map((opt) => (
@@ -118,7 +131,6 @@ export default function AnalyticsWorkspace({
           ))}
         </div>
 
-        {/* 自訂日期區塊與「確認」按鈕 */}
         {filter === 'custom' && (
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[#E5E0D8] text-sm text-[#2C2623] shadow-sm">
             <span className="text-[#8C827A]">開始：</span>
@@ -149,16 +161,15 @@ export default function AnalyticsWorkspace({
       </div>
 
       {loading ? (
-        <div className="py-16 text-center text-[#8C827A] font-medium">載入分析數據中...</div>
+        <div className="py-16 text-center text-[#8C827A] font-medium">載入真實分析數據中...</div>
       ) : (
         <div className="space-y-6">
-          {/* 頂部總覽區：高質感圓餅圖與金額卡片 */}
+          {/* 總覽區：高質感圓餅圖與金額卡片 */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* 左側：精美圓餅圖預覽卡片 */}
             <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
               <div className="absolute top-4 left-6 text-sm font-semibold text-[#8C827A]">總支出佔比概覽</div>
               <div className="my-6 relative flex items-center justify-center">
-                <div className="w-36 h-36 rounded-full border-8 border-[#F5F2EC] border-t-[#2C2623] border-r-[#C88A32] flex flex-col items-center justify-center shadow-inner">
+                <div className="w-36 h-36 rounded-full border-8 border-[#F5F2EC] border-t-[#C88A32] border-r-[#2C2623] flex flex-col items-center justify-center shadow-inner bg-gradient-to-tr from-[#FFFDF9] to-white">
                   <span className="text-xs text-[#8C827A] font-medium">總支出</span>
                   <span className="text-xl font-bold text-[#2C2623] mt-0.5">
                     ${totalExpense.toLocaleString()}
@@ -171,11 +182,10 @@ export default function AnalyticsWorkspace({
               </div>
             </div>
 
-            {/* 右側：總支出與總收入大卡 */}
             <div className="lg:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col justify-between">
                 <div>
-                  <p className="text-sm font-medium text-[#8C827A]">本期總支出</p>
+                  <p className="text-sm font-medium text-[#8N827A]">本期總支出</p>
                   <p className="mt-3 text-3xl font-extrabold text-[#E54D42]">
                     ${totalExpense.toLocaleString()}
                   </p>
@@ -201,7 +211,7 @@ export default function AnalyticsWorkspace({
             </div>
           </div>
 
-          {/* 分類百分比列表與進度條（點擊可開彈窗檢視明細） */}
+          {/* 分類百分比列表與進度條 */}
           <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-[#2C2623]">支出分類統計與佔比</h3>
@@ -228,7 +238,7 @@ export default function AnalyticsWorkspace({
                       </div>
                       <div className="h-3 w-full rounded-full bg-[#F5F2EC] overflow-hidden">
                         <div
-                          className="h-full bg-[#2C2623] group-hover:bg-[#C88A32] rounded-full transition-all duration-500"
+                          className="h-full bg-[#C88A32] rounded-full transition-all duration-500"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
