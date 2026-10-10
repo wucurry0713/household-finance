@@ -19,7 +19,7 @@ export default function AnalyticsWorkspace({
 
   const [customStartDate, setCustomStartDate] = useState(firstDayStr);
   const [customEndDate, setCustomEndDate] = useState(todayStr);
-  const [data, setData] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   const filterOptions = [
@@ -34,13 +34,11 @@ export default function AnalyticsWorkspace({
     try {
       let res;
       if (filter === 'custom') {
-        // 自訂區間傳入 startDate 與 endDate
         res = await loadAnalyticsTransactions(supabase, householdId, '', customStartDate, customEndDate);
       } else {
-        // 一般 Preset 模式
         res = await loadAnalyticsTransactions(supabase, householdId, filter);
       }
-      setData(res);
+      setTransactions(res || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -48,10 +46,29 @@ export default function AnalyticsWorkspace({
     }
   }, [supabase, householdId, filter, customStartDate, customEndDate]);
 
-  // 當篩選條件改變時自動抓取資料
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // 計算總支出、總收入與分類統計
+  const totalExpense = transactions
+    .filter((t) => t.kind === 'expense')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const totalIncome = transactions
+    .filter((t) => t.kind === 'income')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  // 分類統計 (僅統計支出)
+  const categoryStats = transactions
+    .filter((t) => t.kind === 'expense')
+    .reduce((acc: Record<string, number>, t) => {
+      const cat = t.category || '未分類';
+      acc[cat] = (acc[cat] || 0) + (Number(t.amount) || 0);
+      return acc;
+    }, {});
+
+  const sortedCategories = Object.entries(categoryStats).sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="space-y-6 p-4">
@@ -94,19 +111,54 @@ export default function AnalyticsWorkspace({
         )}
       </div>
 
-      {/* 數據載入狀態 / 內容顯示區 */}
+      {/* 數據卡片區域 */}
       {loading ? (
         <div className="py-12 text-center text-stone-400">載入數據中...</div>
       ) : (
-        <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-stone-800 mb-4">分析統計總覽</h3>
-          {data ? (
-            <pre className="text-xs bg-stone-50 p-4 rounded overflow-auto max-h-96">
-              {JSON.stringify(data, null, 2)}
-            </pre>
-          ) : (
-            <div className="text-stone-400">尚無資料</div>
-          )}
+        <div className="space-y-6">
+          {/* 數據總覽小卡 */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+              <p className="text-sm text-stone-500">總支出</p>
+              <p className="mt-2 text-2xl font-bold text-rose-600">
+                ${totalExpense.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+              <p className="text-sm text-stone-500">總收入</p>
+              <p className="mt-2 text-2xl font-bold text-emerald-600">
+                ${totalIncome.toLocaleString()}
+              </p>
+            </div>
+          </div>
+
+          {/* 分類支出排行榜 */}
+          <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-stone-800 mb-4">支出分類統計</h3>
+            {sortedCategories.length > 0 ? (
+              <div className="space-y-3">
+                {sortedCategories.map(([cat, amount]) => {
+                  const percentage = totalExpense > 0 ? ((amount / totalExpense) * 100).toFixed(1) : '0';
+                  return (
+                    <div key={cat} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium text-stone-700">{cat}</span>
+                        <span className="text-stone-600">${amount.toLocaleString()} ({percentage}%)</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-stone-100 overflow-hidden">
+                        <div
+                          className="h-full bg-stone-700 rounded-full"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-stone-400 py-4 text-center">該區間內尚無支出資料</div>
+            )}
+          </div>
         </div>
       )}
     </div>
