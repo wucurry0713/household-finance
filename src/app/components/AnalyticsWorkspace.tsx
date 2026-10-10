@@ -2,16 +2,18 @@
 
 import { useState } from 'react';
 
+interface AnalyticsWorkspaceProps {
+  householdId: string;
+  selectedMonth?: string;
+  initialTransactions?: any[];
+}
+
 export default function AnalyticsWorkspace({
   householdId,
   selectedMonth,
-  initialTransactions,
-}: {
-  householdId: string;
-  selectedMonth?: string;
-  initialTransactions: any[];
-}) {
-  const [transactions] = useState<any[]>(initialTransactions || []);
+  initialTransactions = [],
+}: AnalyticsWorkspaceProps) {
+  const [transactions] = useState<any[]>(initialTransactions);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // 相容判斷：支援 kind 或 type
@@ -58,7 +60,6 @@ export default function AnalyticsWorkspace({
         <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
           <div className="absolute top-4 left-6 text-sm font-semibold text-[#8C827A]">總支出佔比概覽</div>
           <div className="my-6 relative flex items-center justify-center">
-            {/* 使用飽滿厚實的圓環設計與溫潤暖色調 */}
             <div className="w-40 h-40 rounded-full border-[18px] border-[#F5F2EC] border-t-[#C88A32] border-r-[#2C2623] flex flex-col items-center justify-center shadow-inner bg-white">
               <span className="text-xs text-[#8C827A] font-medium tracking-wide">總支出</span>
               <span className="text-2xl font-black text-[#2C2623] mt-0.5">
@@ -127,7 +128,6 @@ export default function AnalyticsWorkspace({
                       {percentage}% <span className="text-[#8C827A] font-normal ml-1">(${amount.toLocaleString()})</span>
                     </span>
                   </div>
-                  {/* 加粗、圓潤且高質感的進度條 */}
                   <div className="h-3.5 w-full rounded-full bg-[#F5F2EC] overflow-hidden p-0.5">
                     <div
                       className="h-full bg-[#2C2623] group-hover:bg-[#C88A32] rounded-full transition-all duration-500"
@@ -167,35 +167,4 @@ export default function AnalyticsWorkspace({
                   const catTotal = categoryStats[selectedCategory] || 1;
                   const itemPct = ((amt / catTotal) * 100).toFixed(1);
                   return (
-                    <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-[#2C2623] text-sm">{t.title || t.name || '未命名交易'}</p>
-                        <p className="text-xs text-[#8C827A] mt-0.5">{t.date || t.created_at?.split('T')[0]}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-[#E54D42]">${amt.toLocaleString()}</p>
-                        <p className="text-xs text-[#8C827A]">佔分類 {itemPct}%</p>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="py-12 text-center text-[#8C827A]">此分類尚無明細資料</div>
-              )}
-            </div>
-
-            <div className="p-4 border-t border-[#E5E0D8] bg-[#FBF9F5] flex justify-between items-center text-sm">
-              <span className="text-[#8C827A]">分類總計：<strong className="text-[#2C2623]">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong></span>
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className="px-5 py-2 bg-[#2C2623] text-white rounded-xl font-medium hover:bg-black transition-all"
-              >
-                關閉
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                    <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify

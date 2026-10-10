@@ -20,14 +20,14 @@ export default async function AnalyticsPage({
     redirect("/login");
   }
 
-  const { month } = await searchParams;
+  const resolvedParams = await searchParams;
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(
     now.getMonth() + 1
   ).padStart(2, "0")}`;
-  const selectedMonth = month || defaultMonth;
+  const selectedMonth = resolvedParams.month || defaultMonth;
 
-  // 取得使用者家庭 ID 與顯示名稱
+  // 1. 取得使用者 profile 資訊
   const { data: profile } = await supabase
     .from("profiles")
     .select("household_id, display_name")
@@ -42,22 +42,39 @@ export default async function AnalyticsPage({
     user.email?.split("@")[0] ||
     "家庭成員";
 
-  // 在伺服器端直接以該月份撈取資料（跟總覽頁完全一致的邏輯）
+  // 2. 設定月份起訖時間
   const startDate = `${selectedMonth}-01`;
   const [year, m] = selectedMonth.split('-').map(Number);
   const lastDay = new Date(year, m, 0).getDate();
   const endDate = `${selectedMonth}-${lastDay}`;
 
+  // 3. 查詢交易資料
   let transactions: any[] = [];
+  
   if (householdId) {
-    const { data } = await supabase
+    const { data: householdData } = await supabase
       .from("transactions")
       .select("*")
       .eq("household_id", householdId)
       .gte("date", startDate)
       .lte("date", endDate);
 
-    transactions = data || [];
+    if (householdData && householdData.length > 0) {
+      transactions = householdData;
+    }
+  }
+
+  if (transactions.length === 0) {
+    const { data: userData } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("user_id", user.id)
+      .gte("date", startDate)
+      .lte("date", endDate);
+
+    if (userData && userData.length > 0) {
+      transactions = userData;
+    }
   }
 
   return (
