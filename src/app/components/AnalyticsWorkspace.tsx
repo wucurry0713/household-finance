@@ -1,17 +1,27 @@
-import "server-only";
-import { useState, useEffect } from 'react';
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
 import { loadAnalyticsTransactions } from "@/lib/finance/analytics";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import { monthDateRange } from "@/lib/finance/month";
 
-const AnalyticsPage = ({ supabase, householdId }: { supabase: SupabaseClient<Database>, householdId: string }) => {
+export default function AnalyticsWorkspace({
+  supabase,
+  householdId,
+}: {
+  supabase: SupabaseClient<Database>;
+  householdId: string;
+}) {
   const [filter, setFilter] = useState('this_month');
-  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [customStartDate, setCustomStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
-  const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [data, setData] = useState(null);
+  
+  // 預設日期區間：本月 1 號 ~ 今天
+  const todayStr = new Date().toISOString().split('T')[0];
+  const firstDayStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+  const [customStartDate, setCustomStartDate] = useState(firstDayStr);
+  const [customEndDate, setCustomEndDate] = useState(todayStr);
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   const filterOptions = [
     { label: '本月', value: 'this_month' },
@@ -20,105 +30,85 @@ const AnalyticsPage = ({ supabase, householdId }: { supabase: SupabaseClient<Dat
     { label: '自訂', value: 'custom' },
   ];
 
-  const fetchData = async () => {
-    if (filter === 'custom') {
-      const since = customStartDate;
-      const until = customEndDate;
-      return loadAnalyticsTransactions(supabase, householdId, '', since, until);
-    } else {
-      const selectedMonth = filter;
-      return loadAnalyticsTransactions(supabase, householdId, selectedMonth);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      let res;
+      if (filter === 'custom') {
+        // 自訂區間傳入 startDate 與 endDate
+        res = await loadAnalyticsTransactions(supabase, householdId, '', customStartDate, customEndDate);
+      } else {
+        // 一般 Preset 模式
+        res = await loadAnalyticsTransactions(supabase, householdId, filter);
+      }
+      setData(res);
+    } catch (err) {
+      console.error("載入分析數據失敗:", err);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [supabase, householdId, filter, customStartDate, customEndDate]);
 
   useEffect(() => {
-    fetchData().then(setData);
-  }, [filter, customStartDate, customEndDate]);
-
-  const handleFilterChange = (event) => {
-    setFilter(event.target.value);
-  };
-
-  const handleDateChange = (event) => {
-    if (event.target.id === 'custom-start-date') {
-      setCustomStartDate(event.target.value);
-    } else if (event.target.id === 'custom-end-date') {
-      setCustomEndDate(event.target.value);
-    }
-  };
-
-  const handleCustomFilter = () => {
-    setFilter('custom');
-  };
+    fetchData();
+  }, [fetchData]);
 
   return (
-    <div>
-      <div className="time-filter">
-        {filterOptions.map((option) => (
-          <button
-            key={option.value}
-            className="filter-button"
-            onClick={() => {
-              if (option.value === 'custom') {
-                handleCustomFilter();
-              } else {
-                setFilter(option.value);
-              }
-            }}
-          >
-            {option.label}
-          </button>
-        ))}
+    <div className="space-y-6 p-4">
+      {/* 篩選切換區 */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-lg bg-stone-100 p-1">
+          {filterOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setFilter(opt.value)}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+                filter === opt.value
+                  ? 'bg-white text-stone-800 shadow-sm'
+                  : 'text-stone-500 hover:text-stone-700'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 當選擇「自訂」時展開 Date Picker */}
+        {filter === 'custom' && (
+          <div className="flex items-center gap-2 bg-stone-50 p-2 rounded-lg border border-stone-200 text-sm">
+            <label className="text-stone-600">開始：</label>
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="px-2 py-1 border border-stone-300 rounded bg-white text-stone-800"
+            />
+            <label className="text-stone-600 ml-2">結束：</label>
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="px-2 py-1 border border-stone-300 rounded bg-white text-stone-800"
+            />
+          </div>
+        )}
       </div>
 
-      {filter === 'custom' && (
-        <div id="custom-date-picker">
-          <label htmlFor="custom-start-date">開始日期:</label>
-          <input
-            type="date"
-            id="custom-start-date"
-            name="custom-start-date"
-            value={customStartDate}
-            onChange={handleDateChange}
-          />
-          <label htmlFor="custom-end-date">結束日期:</label>
-          <input
-            type="date"
-            id="custom-end-date"
-            name="custom-end-date"
-            value={customEndDate}
-            onChange={handleDateChange}
-          />
-          <button onClick={() => fetchData()}>套用</button>
-        </div>
-      )}
-
-      {data && (
-        <div>
-          <h2>總支出金額: {data.totalExpenditure}</h2>
-          <div id="chart"></div>
-          <table>
-            <thead>
-              <tr>
-                <th>分類</th>
-                <th>交易數量</th>
-                <th>占比</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.categories.map((category) => (
-                <tr key={category.id}>
-                  <td>{category.name}</td>
-                  <td>{category.transactionCount}</td>
-                  <td>{category.percentage}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* 數據載入狀態 / 內容顯示區 */}
+      {loading ? (
+        <div className="py-12 text-center text-stone-400">載入數據中...</div>
+      ) : (
+        <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-stone-800 mb-4">分析統計總覽</h3>
+          {data ? (
+            <pre className="text-xs bg-stone-50 p-4 rounded overflow-auto max-h-96">
+              {JSON.stringify(data, null, 2)}
+            </pre>
+          ) : (
+            <div className="text-stone-400">尚無資料</div>
+          )}
         </div>
       )}
     </div>
   );
-};
-
-export default AnalyticsPage;
+}
