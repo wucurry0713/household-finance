@@ -20,6 +20,11 @@ export default function AnalyticsWorkspace({
 
   const [customStartDate, setCustomStartDate] = useState(firstDayStr);
   const [customEndDate, setCustomEndDate] = useState(todayStr);
+
+  // 實際生效的自訂日期（點擊確認按鈕後才更新）
+  const [appliedStartDate, setAppliedStartDate] = useState(firstDayStr);
+  const [appliedEndDate, setAppliedEndDate] = useState(todayStr);
+
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -32,18 +37,12 @@ export default function AnalyticsWorkspace({
   ];
 
   const fetchData = useCallback(async () => {
+    if (!householdId) return;
     setLoading(true);
     try {
-      if (!householdId) {
-        console.warn("未帶入 householdId，使用預設測試數據");
-        setTransactions(getMockTransactions());
-        setLoading(false);
-        return;
-      }
-
       let res: any[] = [];
       if (filter === 'custom') {
-        res = await loadAnalyticsTransactions(supabase, householdId, '', customStartDate, customEndDate);
+        res = await loadAnalyticsTransactions(supabase, householdId, '', appliedStartDate, appliedEndDate);
       } else if (filter === 'this_month') {
         const targetMonth = selectedMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         res = await loadAnalyticsTransactions(supabase, householdId, targetMonth);
@@ -51,36 +50,21 @@ export default function AnalyticsWorkspace({
         res = await loadAnalyticsTransactions(supabase, householdId, filter);
       }
       
-      console.log("分析頁面成功取得資料：", res);
-      if (!res || res.length === 0) {
-        console.log("資料庫無資料，載入預設展示數據以便檢視 UI");
-        setTransactions(getMockTransactions());
-      } else {
-        setTransactions(res);
-      }
+      console.log("分析頁面真實取得資料：", res);
+      setTransactions(res || []);
     } catch (err) {
-      console.error("載入分析數據失敗，使用展示數據:", err);
-      setTransactions(getMockTransactions());
+      console.error("載入分析數據失敗:", err);
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
-  }, [supabase, householdId, filter, selectedMonth, customStartDate, customEndDate]);
+  }, [supabase, householdId, filter, selectedMonth, appliedStartDate, appliedEndDate]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // 測試用模擬資料（確保甜甜圈圖與分類列表隨時完美展示）
-  function getMockTransactions() {
-    return [
-      { id: '1', kind: 'expense', amount: 1143, category: '早餐', title: '美味早點', date: '2026-10-01' },
-      { id: '2', kind: 'expense', amount: 850, category: '早餐', title: '咖啡三明治', date: '2026-10-02' },
-      { id: '3', kind: 'expense', amount: 1500, category: '晚餐', title: '家庭聚餐', date: '2026-10-03' },
-      { id: '4', kind: 'expense', amount: 600, category: '交通', title: '捷運與計程車', date: '2026-10-04' },
-      { id: '5', kind: 'income', amount: 50000, category: '薪資', title: '十月份薪資', date: '2026-10-05' },
-    ];
-  }
-
+  // 相容判斷：支援 kind 或 type
   const isExpense = (t: any) => t.kind === 'expense' || t.type === 'expense';
   const isIncome = (t: any) => t.kind === 'income' || t.type === 'income';
 
@@ -97,6 +81,7 @@ export default function AnalyticsWorkspace({
     .filter(isIncome)
     .reduce((sum, t) => sum + getAmount(t), 0);
 
+  // 分類統計
   const categoryStats = transactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
@@ -133,6 +118,7 @@ export default function AnalyticsWorkspace({
           ))}
         </div>
 
+        {/* 自訂日期區塊與「確認」按鈕 */}
         {filter === 'custom' && (
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[#E5E0D8] text-sm text-[#2C2623] shadow-sm">
             <span className="text-[#8C827A]">開始：</span>
@@ -149,6 +135,15 @@ export default function AnalyticsWorkspace({
               onChange={(e) => setCustomEndDate(e.target.value)}
               className="bg-transparent focus:outline-none"
             />
+            <button
+              onClick={() => {
+                setAppliedStartDate(customStartDate);
+                setAppliedEndDate(customEndDate);
+              }}
+              className="ml-2 px-3 py-1 bg-[#2C2623] text-white rounded-lg text-xs font-medium hover:bg-black transition-all"
+            >
+              確認
+            </button>
           </div>
         )}
       </div>
@@ -157,9 +152,9 @@ export default function AnalyticsWorkspace({
         <div className="py-16 text-center text-[#8C827A] font-medium">載入分析數據中...</div>
       ) : (
         <div className="space-y-6">
-          {/* 頂部總覽區：甜甜圈圓餅圖與金額卡片 */}
+          {/* 頂部總覽區：高質感圓餅圖與金額卡片 */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* 左側：甜甜圈總支出預覽卡片 */}
+            {/* 左側：精美圓餅圖預覽卡片 */}
             <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
               <div className="absolute top-4 left-6 text-sm font-semibold text-[#8C827A]">總支出佔比概覽</div>
               <div className="my-6 relative flex items-center justify-center">
@@ -248,11 +243,10 @@ export default function AnalyticsWorkspace({
         </div>
       )}
 
-      {/* 點擊分類彈出交易明細 Modal (CategoryDetailModal) */}
+      {/* 點擊分類彈出交易明細 Modal */}
       {selectedCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#E5E0D8] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* 彈窗標題 */}
             <div className="p-6 border-b border-[#E5E0D8] flex items-center justify-between bg-[#FBF9F5]">
               <div>
                 <h3 className="text-lg font-bold text-[#2C2623]">📁 {selectedCategory} - 交易明細</h3>
@@ -266,7 +260,6 @@ export default function AnalyticsWorkspace({
               </button>
             </div>
 
-            {/* 彈窗內容列表 */}
             <div className="p-6 overflow-y-auto space-y-3 flex-1">
               {categoryTransactions.length > 0 ? (
                 categoryTransactions.map((t, idx) => {
@@ -291,7 +284,6 @@ export default function AnalyticsWorkspace({
               )}
             </div>
 
-            {/* 彈窗底部 */}
             <div className="p-4 border-t border-[#E5E0D8] bg-[#FBF9F5] flex justify-between items-center text-sm">
               <span className="text-[#8C827A]">分類總計：<strong className="text-[#2C2623]">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong></span>
               <button
