@@ -1,89 +1,65 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { AppHeader } from "../components/AppHeader";
-import { MonthSelector } from "../components/MonthSelector";
-import AnalyticsWorkspace from "../components/AnalyticsWorkspace";
 
-export const dynamic = 'force-dynamic';
+import { AppHeader } from "@/app/components/AppHeader";
+import AnalyticsWorkspace from "@/app/components/AnalyticsWorkspace";
+import { loadDashboardData } from "@/lib/finance/dashboard";
+import { normalizeMonthKey } from "@/lib/finance/month";
+import { ensureUserProfileAndHousehold } from "@/lib/supabase/provision";
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage({
   searchParams,
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
+  const params = await searchParams;
+  const selectedMonth = normalizeMonthKey(params.month);
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
+  if (!user) redirect("/login");
 
-  const resolvedParams = await searchParams;
-  const now = new Date();
-  const defaultMonth = `${now.getFullYear()}-${String(
-    now.getMonth() + 1
-  ).padStart(2, "0")}`;
-  const selectedMonth = resolvedParams.month || defaultMonth;
+  const provision = await ensureUserProfileAndHousehold(supabase, user);
+  if (provision.error !== null) throw new Error(provision.error);
 
-  // 1. 取得使用者 profile 資訊
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("household_id, display_name")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, { data: household }] = await Promise.all([
+    supabase.from("users").select("display_name").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("households")
+      .select("base_currency")
+      .eq("id", provision.householdId)
+      .single(),
+  ]);
+  const baseCurrency = household?.base_currency ?? "TWD";
 
-  const userProfile = profile as { household_id?: string; display_name?: string } | null;
-  const householdId = userProfile?.household_id || "";
+  const dashboard = await loadDashboardData(
+    supabase,
+    provision.householdId,
+    user.id,
+    baseCurrency,
+    selectedMonth,
+  );
+
   const displayName =
-    userProfile?.display_name ||
+    profile?.display_name ||
     user.user_metadata?.display_name ||
     user.email?.split("@")[0] ||
     "家庭成員";
 
-  // 2. 設定月份起訖時間
-  const startDate = `${selectedMonth}-01`;
-  const [year, m] = selectedMonth.split('-').map(Number);
-  const lastDay = new Date(year, m, 0).getDate();
-  const endDate = `${selectedMonth}-${lastDay}`;
-
-  // 3. 查詢交易資料（使用型別斷言確保不被 TypeScript 阻擋）
-  let transactions: any[] = [];
-  
-  if (householdId) {
-    const { data } = await supabase
-      .from("transactions")
-      .select("*")
-      .eq("household_id", householdId)
-      .gte("date", startDate)
-      .lte("date", endDate);
-
-    transactions = data || [];
-  }
-
-  // 如果上面沒抓到，改用通用查詢
-  if (transactions.length === 0) {
-    const { data } = await supabase
-      .from("transactions")
-      .select("*")
-      .gte("date", startDate)
-      .lte("date", endDate);
-
-    transactions = data || [];
-  }
+  // 從 dashboard 中精準取出包含分類與金額的完整交易資料列表
+  const transactions = dashboard.recentTransactions || [];
 
   return (
     <main className="min-h-screen bg-[#FBF9F5] text-[#2C2623]">
-      <AppHeader
-        currentPage="analytics"
-        displayName={displayName}
-        month={selectedMonth}
-      />
-      <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl">
-        <MonthSelector month={selectedMonth} />
+      <AppHeader currentPage="analytics" displayName={displayName} month={selectedMonth} />
+
+      <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl sm:px-8 sm:py-14">
         <AnalyticsWorkspace
-          householdId={householdId}
+          householdId={provision.householdId}
           selectedMonth={selectedMonth}
           initialTransactions={transactions}
         />
