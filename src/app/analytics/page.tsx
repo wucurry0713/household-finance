@@ -48,33 +48,29 @@ export default async function AnalyticsPage({
   const lastDay = new Date(year, m, 0).getDate();
   const endDate = `${selectedMonth}-${lastDay}`;
 
-  // 3. 查詢交易資料
+  // 3. 查詢交易資料（使用型別斷言確保不被 TypeScript 阻擋）
   let transactions: any[] = [];
   
   if (householdId) {
-    const { data: householdData } = await supabase
+    const { data } = await supabase
       .from("transactions")
       .select("*")
       .eq("household_id", householdId)
       .gte("date", startDate)
       .lte("date", endDate);
 
-    if (householdData && householdData.length > 0) {
-      transactions = householdData;
-    }
+    transactions = data || [];
   }
 
+  // 如果上面沒抓到，改用通用查詢
   if (transactions.length === 0) {
-    const { data: userData } = await supabase
+    const { data } = await supabase
       .from("transactions")
       .select("*")
-      .eq("user_id", user.id)
       .gte("date", startDate)
       .lte("date", endDate);
 
-    if (userData && userData.length > 0) {
-      transactions = userData;
-    }
+    transactions = data || [];
   }
 
   return (

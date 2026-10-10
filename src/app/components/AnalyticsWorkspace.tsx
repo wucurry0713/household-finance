@@ -167,4 +167,35 @@ export default function AnalyticsWorkspace({
                   const catTotal = categoryStats[selectedCategory] || 1;
                   const itemPct = ((amt / catTotal) * 100).toFixed(1);
                   return (
-                    <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify
+                    <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-[#2C2623] text-sm">{t.title || t.name || '未命名交易'}</p>
+                        <p className="text-xs text-[#8C827A] mt-0.5">{t.date || t.created_at?.split('T')[0]}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-[#E54D42]">${amt.toLocaleString()}</p>
+                        <p className="text-xs text-[#8C827A]">佔分類 {itemPct}%</p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-12 text-center text-[#8C827A]">此分類尚無明細資料</div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-[#E5E0D8] bg-[#FBF9F5] flex justify-between items-center text-sm">
+              <span className="text-[#8C827A]">分類總計：<strong className="text-[#2C2623]">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong></span>
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className="px-5 py-2 bg-[#2C2623] text-white rounded-xl font-medium hover:bg-black transition-all"
+              >
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
