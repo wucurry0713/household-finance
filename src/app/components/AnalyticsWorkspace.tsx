@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { loadAnalyticsTransactions } from "@/lib/finance/analytics";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AnalyticsWorkspace({
@@ -34,25 +33,46 @@ export default function AnalyticsWorkspace({
     { label: '自訂', value: 'custom' },
   ];
 
+  // 直接在前端組件內精準查詢，確保 100% 抓到資料
   const fetchData = useCallback(async () => {
     if (!householdId) return;
     setLoading(true);
     try {
-      let res: any[] = [];
+      let query = supabase
+        .from('transactions')
+        .select('*')
+        .eq('household_id', householdId);
+
       const targetMonth = selectedMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      if (filter === 'custom') {
-        res = await loadAnalyticsTransactions(supabase, householdId, '', appliedStartDate, appliedEndDate);
-      } else if (filter === 'this_month') {
-        res = await loadAnalyticsTransactions(supabase, householdId, targetMonth);
-      } else {
-        res = await loadAnalyticsTransactions(supabase, householdId, filter);
+      if (filter === 'this_month') {
+        const startDate = `${targetMonth}-01`;
+        const [year, m] = targetMonth.split('-').map(Number);
+        const lastDay = new Date(year, m, 0).getDate();
+        const endDate = `${targetMonth}-${lastDay}`;
+        query = query.gte('date', startDate).lte('date', endDate);
+      } else if (filter === 'custom') {
+        query = query.gte('date', appliedStartDate).lte('date', appliedEndDate);
+      } else if (filter === 'this_year') {
+        const yearStart = `${now.getFullYear()}-01-01`;
+        const yearEnd = `${now.getFullYear()}-12-31`;
+        query = query.gte('date', yearStart).lte('date', yearEnd);
+      } else if (filter === 'last_six_months') {
+        const past = new Date();
+        past.setMonth(past.getMonth() - 6);
+        query = query.gte('date', past.toISOString().split('T')[0]);
       }
 
-      console.log("分析頁面載入資料成功：", res);
-      setTransactions(res || []);
+      const { data, error } = await query;
+      if (error) {
+        console.error("Supabase 查詢失敗:", error);
+        setTransactions([]);
+      } else {
+        console.log("【分析頁面】成功載入交易資料：", data);
+        setTransactions(data || []);
+      }
     } catch (err) {
-      console.error("載入分析數據失敗:", err);
+      console.error("載入分析數據例外錯誤:", err);
       setTransactions([]);
     } finally {
       setLoading(false);
@@ -63,6 +83,7 @@ export default function AnalyticsWorkspace({
     fetchData();
   }, [fetchData]);
 
+  // 相容判斷：支援 kind 或 type
   const isExpense = (t: any) => t.kind === 'expense' || t.type === 'expense';
   const isIncome = (t: any) => t.kind === 'income' || t.type === 'income';
 
@@ -79,6 +100,7 @@ export default function AnalyticsWorkspace({
     .filter(isIncome)
     .reduce((sum, t) => sum + getAmount(t), 0);
 
+  // 分類統計
   const categoryStats = transactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
