@@ -2,21 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { loadAnalyticsTransactions } from "@/lib/finance/analytics";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AnalyticsWorkspace({
-  supabase,
   householdId,
 }: {
-  supabase: SupabaseClient<Database>;
   householdId: string;
 }) {
+  const supabase = createClient();
   const [filter, setFilter] = useState('this_month');
-  
+
   // 預設日期區間：本月 1 號 ~ 今天
-  const todayStr = new Date().toISOString().split('T')[0];
-  const firstDayStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const firstDayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
   const [customStartDate, setCustomStartDate] = useState(firstDayStr);
   const [customEndDate, setCustomEndDate] = useState(todayStr);
@@ -43,12 +42,13 @@ export default function AnalyticsWorkspace({
       }
       setData(res);
     } catch (err) {
-      console.error("載入分析數據失敗:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   }, [supabase, householdId, filter, customStartDate, customEndDate]);
 
+  // 當篩選條件改變時自動抓取資料
   useEffect(() => {
     fetchData();
   }, [fetchData]);

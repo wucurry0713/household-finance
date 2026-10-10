@@ -54,7 +54,6 @@ export default async function AnalyticsPage({
         <MonthSelector month={selectedMonth} />
 {/* 正確的寫法 */}
 <AnalyticsWorkspace
-  supabase={supabase}
   householdId={householdId}
 />
       </div>
