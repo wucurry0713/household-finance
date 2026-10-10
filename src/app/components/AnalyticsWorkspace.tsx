@@ -6,13 +6,15 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function AnalyticsWorkspace({
   householdId,
+  selectedMonth,
 }: {
   householdId: string;
+  selectedMonth?: string;
 }) {
   const supabase = createClient();
   const [filter, setFilter] = useState('this_month');
 
-  // 預設日期區間：本月 1 號 ~ 今天
+  // 預設自訂日期區間：本月 1 號 ~ 今天
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   const firstDayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
@@ -34,8 +36,14 @@ export default function AnalyticsWorkspace({
     try {
       let res;
       if (filter === 'custom') {
+        // 自訂模式：帶入開始與結束日期
         res = await loadAnalyticsTransactions(supabase, householdId, '', customStartDate, customEndDate);
+      } else if (filter === 'this_month') {
+        // 本月模式：帶入頁面頂部選擇的 selectedMonth (例如 2026-10)
+        const targetMonth = selectedMonth || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        res = await loadAnalyticsTransactions(supabase, householdId, targetMonth);
       } else {
+        // 近 6 個月 或 今年 模式
         res = await loadAnalyticsTransactions(supabase, householdId, filter);
       }
       setTransactions(res || []);
@@ -44,7 +52,7 @@ export default function AnalyticsWorkspace({
     } finally {
       setLoading(false);
     }
-  }, [supabase, householdId, filter, customStartDate, customEndDate]);
+  }, [supabase, householdId, filter, selectedMonth, customStartDate, customEndDate]);
 
   useEffect(() => {
     fetchData();
@@ -71,7 +79,7 @@ export default function AnalyticsWorkspace({
   const sortedCategories = Object.entries(categoryStats).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="space-y-6">
       {/* 篩選切換區 */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-lg bg-stone-100 p-1">

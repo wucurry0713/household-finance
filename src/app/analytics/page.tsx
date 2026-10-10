@@ -1,61 +1,59 @@
-import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-
-import AnalyticsWorkspace from "@/app/components/AnalyticsWorkspace";
-import { AppHeader } from "@/app/components/AppHeader";
-import { MonthSelector } from "@/app/components/MonthSelector";
-import { loadAnalyticsTransactions } from "@/lib/finance/analytics";
-import { getFinanceContext } from "@/lib/finance/context";
-import { normalizeMonthKey } from "@/lib/finance/month";
-
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-  title: "分析統計 | Ledgero",
-};
+import { AppHeader } from "../components/AppHeader";
+import { MonthSelector } from "../components/MonthSelector";
+import AnalyticsWorkspace from "../components/AnalyticsWorkspace";
 
 export default async function AnalyticsPage({
   searchParams,
-}: PageProps<"/analytics">) {
-  const params = await searchParams;
-  const selectedMonth = normalizeMonthKey(params.month);
-  const result = await getFinanceContext();
-  if (!result.context) redirect("/login");
-  const { supabase, householdId, user } = result.context;
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const [{ data: profile, error: profileError }, { data: household, error: householdError }] =
-    await Promise.all([
-      supabase.from("users").select("display_name").eq("id", user.id).maybeSingle(),
-      supabase
-        .from("households")
-        .select("base_currency")
-        .eq("id", householdId)
-        .single(),
-    ]);
-  if (profileError) {
-    console.error("[analytics] profile query failed", profileError);
-    throw new Error(`Profile query failed: ${profileError.message}`);
+  if (!user) {
+    redirect("/login");
   }
-  if (householdError) {
-    console.error("[analytics] household query failed", householdError);
-    throw new Error(`Household query failed: ${householdError.message}`);
-  }
-  const transactions = await loadAnalyticsTransactions(supabase, householdId, selectedMonth);
+
+  const { month } = await searchParams;
+  const now = new Date();
+  const defaultMonth = `${now.getFullYear()}-${String(
+    now.getMonth() + 1
+  ).padStart(2, "0")}`;
+  const selectedMonth = month || defaultMonth;
+
+  // 取得使用者家庭 ID 與顯示名稱
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("household_id, display_name")
+    .eq("id", user.id)
+    .single();
+
+  const userProfile = profile as { household_id?: string; display_name?: string } | null;
+
+  const householdId = userProfile?.household_id || "";
   const displayName =
-    profile?.display_name ||
-    user.user_metadata.display_name ||
+    userProfile?.display_name ||
+    user.user_metadata?.display_name ||
     user.email?.split("@")[0] ||
     "家庭成員";
 
   return (
     <main className="min-h-screen bg-[#FBF9F5] text-[#2C2623]">
-      <AppHeader currentPage="analytics" displayName={displayName} month={selectedMonth} />
-      <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl sm:px-8 sm:py-14">
+      <AppHeader
+        currentPage="analytics"
+        displayName={displayName}
+        month={selectedMonth}
+      />
+      <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl">
         <MonthSelector month={selectedMonth} />
-{/* 正確的寫法 */}
-<AnalyticsWorkspace
-  householdId={householdId}
-/>
+        <AnalyticsWorkspace
+          householdId={householdId}
+          selectedMonth={selectedMonth}
+        />
       </div>
     </main>
   );
