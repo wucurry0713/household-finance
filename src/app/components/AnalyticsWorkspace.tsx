@@ -19,7 +19,7 @@ export default function AnalyticsWorkspace({
   const [transactions] = useState<any[]>(initialTransactions);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // 篩選狀態：all (全部), personal (個人), joint (家庭)
+  // 篩選狀態：all (全部), personal (個人專屬), joint (家庭共同)
   const [memberFilter, setMemberFilter] = useState<'all' | 'personal' | 'joint'>('all');
 
   // 判斷支出與收入
@@ -31,14 +31,14 @@ export default function AnalyticsWorkspace({
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 精準的個人與家庭雙人篩選邏輯
+  // 交易過濾邏輯
   const filteredTransactions = transactions.filter((t) => {
     if (memberFilter === 'personal') {
-      // 個人：非共同支出（is_joint 為 false/null），且 owner_id 等於當前使用者
+      // 純個人交易：非共同支出，且屬於目前使用者或無指定擁有者
       return !t.is_joint && (t.owner_id === currentUserId || !t.owner_id);
     }
     if (memberFilter === 'joint') {
-      // 家庭雙人：共同支出 (is_joint 為 true)
+      // 共同家庭交易：is_joint 為 true
       return t.is_joint === true;
     }
     return true;
@@ -54,7 +54,7 @@ export default function AnalyticsWorkspace({
 
   const balance = totalIncome - totalExpense;
 
-  // 分類統計
+  // 分類統計：優先取 categoryName
   const categoryStats = filteredTransactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
@@ -73,7 +73,7 @@ export default function AnalyticsWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* 頂部列：月份與日期選擇器 + 個人/家庭篩選 */}
+      {/* 月份選擇器與切換按鈕 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-3xl border border-[#E5E0D8] shadow-sm">
         <MonthSelector month={selectedMonth} />
 
@@ -161,7 +161,7 @@ export default function AnalyticsWorkspace({
         </div>
       </div>
 
-      {/* 分類百分比列表與質感進度條 */}
+      {/* 分類統計清單 */}
       <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-[#2C2623]">支出分類統計與佔比</h3>
@@ -197,11 +197,11 @@ export default function AnalyticsWorkspace({
             })}
           </div>
         ) : (
-          <div className="text-[#8C827A] py-12 text-center font-medium">該篩選區間內尚無支出資料</div>
+          <div className="text-[#8C827A] py-12 text-center font-medium">該篩選條件下尚無支出資料</div>
         )}
       </div>
 
-      {/* 點擊分類彈出交易明細 Modal */}
+      {/* 彈出交易明細 Modal */}
       {selectedCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#E5E0D8] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -227,7 +227,7 @@ export default function AnalyticsWorkspace({
                   return (
                     <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.description || t.accountName || '一般支出'}</p>
+                        <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.accountName || '一般支出'}</p>
                         <p className="text-xs text-[#8C827A] mt-0.5">
                           {t.transaction_date || t.date || t.created_at?.split('T')[0]} {t.is_joint ? '• 🏠 家庭' : '• 👤 個人'}
                         </p>
