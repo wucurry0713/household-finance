@@ -31,16 +31,20 @@ export default function AnalyticsWorkspace({
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 完美對齊 RecentTransactions 的真實判定邏輯：
+  // 根據 RecentTransactions 的真實判定邏輯進行嚴格過濾：
+  // 雙人/共用交易判定：scope 為 shared 或 paid_for_spouse，或是 is_joint 為 true
   const filteredTransactions = transactions.filter((t) => {
-    const isJointTransaction = t.scope === 'shared' || t.scope === 'paid_for_spouse' || t.is_joint === true;
+    const isJointTransaction = 
+      t.scope === 'shared' || 
+      t.scope === 'paid_for_spouse' || 
+      t.is_joint === true;
 
     if (memberFilter === 'personal') {
-      // 個人：不是雙人/共用範圍的支出
+      // 個人：不是雙人/共用範圍的支出（例如保險、Netflix、部分個人午餐等）
       return !isJointTransaction;
     }
     if (memberFilter === 'joint') {
-      // 家庭雙人：必須是 shared 或 paid_for_spouse 或 is_joint
+      // 家庭雙人：必須是雙人/共用支出
       return isJointTransaction;
     }
     return true; // 全部

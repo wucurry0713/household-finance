@@ -52,6 +52,12 @@ export default async function AnalyticsPage({
 
   const transactions = dashboard.recentTransactions || [];
 
+  // 🔍 完整印出每一筆交易的所有屬性到終端機，找出雙人標籤的真正欄位
+  console.log("=== 當前登入的使用者 ID ===", user.id);
+  transactions.forEach((t: any, index: number) => {
+    console.log(`[交易 #${index + 1}]`, JSON.stringify(t, null, 2));
+  });
+
   return (
     <main className="min-h-screen bg-[#FBF9F5] text-[#2C2623]">
       <AppHeader currentPage="analytics" displayName={displayName} month={selectedMonth} />
