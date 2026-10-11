@@ -5,12 +5,14 @@ import { MonthSelector } from './MonthSelector';
 
 interface AnalyticsWorkspaceProps {
   householdId: string;
+  currentUserId: string;
   selectedMonth?: string;
   initialTransactions?: any[];
 }
 
 export default function AnalyticsWorkspace({
   householdId,
+  currentUserId,
   selectedMonth = '',
   initialTransactions = [],
 }: AnalyticsWorkspaceProps) {
@@ -29,10 +31,16 @@ export default function AnalyticsWorkspace({
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 根據成員/雙人篩選交易
+  // 精準的個人與家庭雙人篩選邏輯
   const filteredTransactions = transactions.filter((t) => {
-    if (memberFilter === 'personal') return t.is_joint === false;
-    if (memberFilter === 'joint') return t.is_joint === true;
+    if (memberFilter === 'personal') {
+      // 個人：非共同支出（is_joint 為 false/null），且 owner_id 等於當前使用者
+      return !t.is_joint && (t.owner_id === currentUserId || !t.owner_id);
+    }
+    if (memberFilter === 'joint') {
+      // 家庭雙人：共同支出 (is_joint 為 true)
+      return t.is_joint === true;
+    }
     return true;
   });
 
@@ -46,7 +54,7 @@ export default function AnalyticsWorkspace({
 
   const balance = totalIncome - totalExpense;
 
-  // 分類統計：正確讀取 categoryName
+  // 分類統計
   const categoryStats = filteredTransactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
@@ -65,7 +73,7 @@ export default function AnalyticsWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* 頂部列：月份選擇與篩選器 */}
+      {/* 頂部列：月份與日期選擇器 + 個人/家庭篩選 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-3xl border border-[#E5E0D8] shadow-sm">
         <MonthSelector month={selectedMonth} />
 
@@ -219,7 +227,6 @@ export default function AnalyticsWorkspace({
                   return (
                     <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
                       <div>
-                        {/* 修正：正確顯示項目的備註/標題、帳戶或項目名稱 */}
                         <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.description || t.accountName || '一般支出'}</p>
                         <p className="text-xs text-[#8C827A] mt-0.5">
                           {t.transaction_date || t.date || t.created_at?.split('T')[0]} {t.is_joint ? '• 🏠 家庭' : '• 👤 個人'}

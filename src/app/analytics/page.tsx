@@ -50,7 +50,6 @@ export default async function AnalyticsPage({
     user.email?.split("@")[0] ||
     "家庭成員";
 
-  // 從 dashboard 中精準取出包含分類與金額的完整交易資料列表
   const transactions = dashboard.recentTransactions || [];
 
   return (
@@ -60,6 +59,7 @@ export default async function AnalyticsPage({
       <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-12 sm:max-w-6xl sm:px-8 sm:py-14">
         <AnalyticsWorkspace
           householdId={provision.householdId}
+          currentUserId={user.id}
           selectedMonth={selectedMonth}
           initialTransactions={transactions}
         />
