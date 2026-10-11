@@ -22,7 +22,6 @@ export default function AnalyticsWorkspace({
   // 篩選狀態：all (全部), personal (個人), joint (家庭雙人)
   const [memberFilter, setMemberFilter] = useState<'all' | 'personal' | 'joint'>('all');
 
-  // 判斷支出與收入
   const isExpense = (t: any) => t.kind === 'expense';
   const isIncome = (t: any) => t.kind === 'income';
 
@@ -31,8 +30,7 @@ export default function AnalyticsWorkspace({
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 根據 RecentTransactions 的真實判定邏輯進行嚴格過濾：
-  // 雙人/共用交易判定：scope 為 shared 或 paid_for_spouse，或是 is_joint 為 true
+  // 嚴格過濾邏輯
   const filteredTransactions = transactions.filter((t) => {
     const isJointTransaction = 
       t.scope === 'shared' || 
@@ -40,14 +38,12 @@ export default function AnalyticsWorkspace({
       t.is_joint === true;
 
     if (memberFilter === 'personal') {
-      // 個人：不是雙人/共用範圍的支出（例如保險、Netflix、部分個人午餐等）
       return !isJointTransaction;
     }
     if (memberFilter === 'joint') {
-      // 家庭雙人：必須是雙人/共用支出
       return isJointTransaction;
     }
-    return true; // 全部
+    return true;
   });
 
   const totalExpense = filteredTransactions
@@ -60,7 +56,6 @@ export default function AnalyticsWorkspace({
 
   const balance = totalIncome - totalExpense;
 
-  // 分類統計
   const categoryStats = filteredTransactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
@@ -121,9 +116,8 @@ export default function AnalyticsWorkspace({
         </div>
       </div>
 
-      {/* 頂部總覽區：高質感厚圓環甜甜圈圖與金額卡片 */}
+      {/* 頂部總覽區 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* 左側：精美厚圓環甜甜圈圖 */}
         <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
           <div className="absolute top-4 left-6 text-sm font-semibold text-[#8C827A]">總支出佔比概覽</div>
           <div className="my-6 relative flex items-center justify-center">
@@ -140,7 +134,6 @@ export default function AnalyticsWorkspace({
           </div>
         </div>
 
-        {/* 右側：總支出與總收入大卡 */}
         <div className="lg:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col justify-between">
             <div>
@@ -150,7 +143,7 @@ export default function AnalyticsWorkspace({
               </p>
             </div>
             <div className="mt-4 text-xs text-[#8C827A]">
-              佔總流水比例：{totalIncome + totalExpense > 0 ? ((totalExpense / (totalIncome + totalExpense)) * 100).toFixed(1) : '100'}%
+              篩選模式：{memberFilter} | 原始交易總筆數：{transactions.length} 筆
             </div>
           </div>
 
@@ -167,6 +160,18 @@ export default function AnalyticsWorkspace({
               </span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* 🔍 畫面直接顯示除錯面板：列出所有原始交易的 scope 與資料，讓一眼看穿 */}
+      <div className="rounded-3xl border border-dashed border-[#C88A32] bg-[#FBF9F5] p-6 shadow-sm">
+        <h4 className="text-sm font-bold text-[#C88A32] mb-3">🛠️ 即時除錯面板（所有原始交易的欄位檢查）：</h4>
+        <div className="space-y-2 max-h-48 overflow-y-auto text-xs font-mono text-[#2C2623]">
+          {transactions.map((t, i) => (
+            <div key={t.id || i} className="bg-white p-2 rounded border border-[#E5E0D8]">
+              #{i + 1} | 備註: {t.notes || t.description || '無'} | 金額: {t.amount} | scope: <strong>{String(t.scope)}</strong> | is_joint: <strong>{String(t.is_joint)}</strong> | owner_id: {t.owner_id || 'null'}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -213,59 +218,29 @@ export default function AnalyticsWorkspace({
       {/* 彈出交易明細 Modal */}
       {selectedCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#E5E0D8] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#E5E0D8] overflow-hidden">
             <div className="p-6 border-b border-[#E5E0D8] flex items-center justify-between bg-[#FBF9F5]">
-              <div>
-                <h3 className="text-lg font-bold text-[#2C2623]">📁 {selectedCategory} - 交易明細</h3>
-                <p className="text-xs text-[#8C827A] mt-0.5">該分類下所有的花費紀錄與佔比</p>
-              </div>
+              <h3 className="text-lg font-bold text-[#2C2623]">📁 {selectedCategory} - 交易明細</h3>
               <button
                 type="button"
                 onClick={() => setSelectedCategory(null)}
-                className="w-9 h-9 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center text-[#8C827A] hover:text-[#2C2623] hover:bg-[#F5F2EC] transition-all font-bold"
+                className="w-9 h-9 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center text-[#8C827A] hover:text-[#2C2623]"
               >
                 ✕
               </button>
             </div>
-
             <div className="p-6 overflow-y-auto space-y-3 flex-1">
-              {categoryTransactions.length > 0 ? (
-                categoryTransactions.map((t, idx) => {
-                  const amt = getAmount(t);
-                  const catTotal = categoryStats[selectedCategory] || 1;
-                  const itemPct = ((amt / catTotal) * 100).toFixed(1);
-                  const isJoint = t.scope === 'shared' || t.scope === 'paid_for_spouse' || t.is_joint;
-                  return (
-                    <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.accountName || '一般支出'}</p>
-                        <p className="text-xs text-[#8C827A] mt-0.5">
-                          {t.transaction_date || t.date || t.created_at?.split('T')[0]} {isJoint ? '• 🏠 雙人' : '• 👤 個人'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-[#E54D42]">${amt.toLocaleString()}</p>
-                        <p className="text-xs text-[#8C827A]">佔分類 {itemPct}%</p>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="py-12 text-center text-[#8C827A]">此分類尚無明細資料</div>
-              )}
-            </div>
-
-            <div className="p-4 border-t border-[#E5E0D8] bg-[#FBF9F5] flex justify-between items-center text-sm">
-              <span className="text-[#8C827A]">
-                分類總計：<strong className="text-[#2C2623]">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => setSelectedCategory(null)}
-                className="px-5 py-2 bg-[#2C2623] text-white rounded-xl font-medium hover:bg-black transition-all"
-              >
-                關閉
-              </button>
+              {categoryTransactions.map((t, idx) => (
+                <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.description || '一般支出'}</p>
+                    <p className="text-xs text-[#8C827A] mt-0.5">scope: {String(t.scope)} | is_joint: {String(t.is_joint)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-[#E54D42]">${getAmount(t).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
