@@ -30,15 +30,12 @@ export default function AnalyticsWorkspace({
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 嚴格過濾邏輯
+  // 根據真實 scope 欄位進行嚴格互斥過濾
   const filteredTransactions = transactions.filter((t) => {
-    const isJointTransaction = 
-      t.scope === 'shared' || 
-      t.scope === 'paid_for_spouse' || 
-      t.is_joint === true;
+    const isJointTransaction = t.scope === 'shared' || t.scope === 'paid_for_spouse';
 
     if (memberFilter === 'personal') {
-      return !isJointTransaction;
+      return t.scope === 'personal' || !isJointTransaction;
     }
     if (memberFilter === 'joint') {
       return isJointTransaction;
@@ -143,7 +140,7 @@ export default function AnalyticsWorkspace({
               </p>
             </div>
             <div className="mt-4 text-xs text-[#8C827A]">
-              篩選模式：{memberFilter} | 原始交易總筆數：{transactions.length} 筆
+              佔總流水比例：{totalIncome + totalExpense > 0 ? ((totalExpense / (totalIncome + totalExpense)) * 100).toFixed(1) : '100'}%
             </div>
           </div>
 
@@ -160,18 +157,6 @@ export default function AnalyticsWorkspace({
               </span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* 🔍 畫面直接顯示除錯面板：列出所有原始交易的 scope 與資料，讓一眼看穿 */}
-      <div className="rounded-3xl border border-dashed border-[#C88A32] bg-[#FBF9F5] p-6 shadow-sm">
-        <h4 className="text-sm font-bold text-[#C88A32] mb-3">🛠️ 即時除錯面板（所有原始交易的欄位檢查）：</h4>
-        <div className="space-y-2 max-h-48 overflow-y-auto text-xs font-mono text-[#2C2623]">
-          {transactions.map((t, i) => (
-            <div key={t.id || i} className="bg-white p-2 rounded border border-[#E5E0D8]">
-              #{i + 1} | 備註: {t.notes || t.description || '無'} | 金額: {t.amount} | scope: <strong>{String(t.scope)}</strong> | is_joint: <strong>{String(t.is_joint)}</strong> | owner_id: {t.owner_id || 'null'}
-            </div>
-          ))}
         </div>
       </div>
 
@@ -234,13 +219,27 @@ export default function AnalyticsWorkspace({
                 <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.description || '一般支出'}</p>
-                    <p className="text-xs text-[#8C827A] mt-0.5">scope: {String(t.scope)} | is_joint: {String(t.is_joint)}</p>
+                    <p className="text-xs text-[#8C827A] mt-0.5">
+                      {t.scope === 'shared' || t.scope === 'paid_for_spouse' ? '• 🏠 雙人' : '• 👤 個人'}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-[#E54D42]">${getAmount(t).toLocaleString()}</p>
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="p-4 border-t border-[#E5E0D8] bg-[#FBF9F5] flex justify-between items-center text-sm">
+              <span className="text-[#8C827A]">
+                分類總計：<strong className="text-[#2C2623]">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(null)}
+                className="px-5 py-2 bg-[#2C2623] text-white rounded-xl font-medium hover:bg-black transition-all"
+              >
+                關閉
+              </button>
             </div>
           </div>
         </div>
