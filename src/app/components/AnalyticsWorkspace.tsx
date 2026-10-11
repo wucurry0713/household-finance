@@ -19,7 +19,7 @@ export default function AnalyticsWorkspace({
   const [transactions] = useState<any[]>(initialTransactions);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // 篩選狀態：all (全部), personal (個人), joint (家庭)
+  // 篩選狀態：all (全部), personal (個人專屬), joint (家庭共同)
   const [memberFilter, setMemberFilter] = useState<'all' | 'personal' | 'joint'>('all');
 
   // 判斷支出與收入
@@ -31,17 +31,17 @@ export default function AnalyticsWorkspace({
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 交易過濾邏輯：兼顧 is_joint 與 owner_id 匹配
+  // 嚴格互斥的過濾邏輯
   const filteredTransactions = transactions.filter((t) => {
     if (memberFilter === 'personal') {
-      // 個人：不是家庭共同支出，或者是自己的交易
-      return !t.is_joint || t.owner_id === currentUserId;
+      // 個人專屬：不是共同支出 (is_joint 為 false/null/undefined)，且 owner_id 符合當前使用者（若無 owner_id 則預設歸屬自己或依欄位而定）
+      return !t.is_joint && (t.owner_id === currentUserId || !t.owner_id);
     }
     if (memberFilter === 'joint') {
-      // 家庭共同支出
+      // 家庭雙人：必須是共同支出 (is_joint 為 true)
       return t.is_joint === true;
     }
-    return true;
+    return true; // 全部
   });
 
   const totalExpense = filteredTransactions
