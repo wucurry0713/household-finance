@@ -19,7 +19,7 @@ export default function AnalyticsWorkspace({
   const [transactions] = useState<any[]>(initialTransactions);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // 篩選狀態：all (全部), personal (個人專屬), joint (家庭共同)
+  // 篩選狀態：all (全部), personal (個人), joint (家庭)
   const [memberFilter, setMemberFilter] = useState<'all' | 'personal' | 'joint'>('all');
 
   // 判斷支出與收入
@@ -31,14 +31,14 @@ export default function AnalyticsWorkspace({
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 交易過濾邏輯
+  // 交易過濾邏輯：兼顧 is_joint 與 owner_id 匹配
   const filteredTransactions = transactions.filter((t) => {
     if (memberFilter === 'personal') {
-      // 純個人交易：非共同支出，且屬於目前使用者或無指定擁有者
-      return !t.is_joint && (t.owner_id === currentUserId || !t.owner_id);
+      // 個人：不是家庭共同支出，或者是自己的交易
+      return !t.is_joint || t.owner_id === currentUserId;
     }
     if (memberFilter === 'joint') {
-      // 共同家庭交易：is_joint 為 true
+      // 家庭共同支出
       return t.is_joint === true;
     }
     return true;
@@ -54,7 +54,7 @@ export default function AnalyticsWorkspace({
 
   const balance = totalIncome - totalExpense;
 
-  // 分類統計：優先取 categoryName
+  // 分類統計
   const categoryStats = filteredTransactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
@@ -73,13 +73,14 @@ export default function AnalyticsWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* 月份選擇器與切換按鈕 */}
+      {/* 頂部列：月份選擇器與切換按鈕 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-3xl border border-[#E5E0D8] shadow-sm">
         <MonthSelector month={selectedMonth} />
 
         {/* 個人 / 家庭 / 全部篩選切換 */}
         <div className="flex items-center bg-[#F5F2EC] p-1 rounded-2xl border border-[#E5E0D8]">
           <button
+            type="button"
             onClick={() => setMemberFilter('all')}
             className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all ${
               memberFilter === 'all'
@@ -90,6 +91,7 @@ export default function AnalyticsWorkspace({
             全部
           </button>
           <button
+            type="button"
             onClick={() => setMemberFilter('personal')}
             className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all ${
               memberFilter === 'personal'
@@ -100,6 +102,7 @@ export default function AnalyticsWorkspace({
             👤 個人
           </button>
           <button
+            type="button"
             onClick={() => setMemberFilter('joint')}
             className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all ${
               memberFilter === 'joint'
@@ -211,6 +214,7 @@ export default function AnalyticsWorkspace({
                 <p className="text-xs text-[#8C827A] mt-0.5">該分類下所有的花費紀錄與佔比</p>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedCategory(null)}
                 className="w-9 h-9 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center text-[#8C827A] hover:text-[#2C2623] hover:bg-[#F5F2EC] transition-all font-bold"
               >
@@ -245,8 +249,11 @@ export default function AnalyticsWorkspace({
             </div>
 
             <div className="p-4 border-t border-[#E5E0D8] bg-[#FBF9F5] flex justify-between items-center text-sm">
-              <span className="text-[#8C827A]">分類總計：<strong className="text-[#2C2623]">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong></span>
+              <span className="text-[#8C827A]">
+                分類總計：<strong className="text-[#2C2623]">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong>
+              </span>
               <button
+                type="button"
                 onClick={() => setSelectedCategory(null)}
                 className="px-5 py-2 bg-[#2C2623] text-white rounded-xl font-medium hover:bg-black transition-all"
               >
