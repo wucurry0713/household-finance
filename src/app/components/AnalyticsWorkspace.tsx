@@ -31,15 +31,17 @@ export default function AnalyticsWorkspace({
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 完美對齊列表標籤的過濾邏輯：
+  // 完美對齊 RecentTransactions 的真實判定邏輯：
   const filteredTransactions = transactions.filter((t) => {
+    const isJointTransaction = t.scope === 'shared' || t.scope === 'paid_for_spouse' || t.is_joint === true;
+
     if (memberFilter === 'personal') {
-      // 個人：不是雙人共同支出（對應保險、Netflix、部分午餐等個人/家人支出）
-      return !t.is_joint;
+      // 個人：不是雙人/共用範圍的支出
+      return !isJointTransaction;
     }
     if (memberFilter === 'joint') {
-      // 家庭雙人：必須是雙人共同支出 (is_joint 為 true)
-      return t.is_joint === true;
+      // 家庭雙人：必須是 shared 或 paid_for_spouse 或 is_joint
+      return isJointTransaction;
     }
     return true; // 全部
   });
@@ -228,12 +230,13 @@ export default function AnalyticsWorkspace({
                   const amt = getAmount(t);
                   const catTotal = categoryStats[selectedCategory] || 1;
                   const itemPct = ((amt / catTotal) * 100).toFixed(1);
+                  const isJoint = t.scope === 'shared' || t.scope === 'paid_for_spouse' || t.is_joint;
                   return (
                     <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
                       <div>
                         <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.accountName || '一般支出'}</p>
                         <p className="text-xs text-[#8C827A] mt-0.5">
-                          {t.transaction_date || t.date || t.created_at?.split('T')[0]} {t.is_joint ? '• 🏠 雙人' : '• 👤 個人'}
+                          {t.transaction_date || t.date || t.created_at?.split('T')[0]} {isJoint ? '• 🏠 雙人' : '• 👤 個人'}
                         </p>
                       </div>
                       <div className="text-right">
