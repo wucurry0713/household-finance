@@ -19,7 +19,7 @@ export default function AnalyticsWorkspace({
   const [transactions] = useState<any[]>(initialTransactions);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // 篩選狀態：all (全部), personal (個人專屬), joint (家庭共同)
+  // 篩選狀態：all (全部), personal (個人), joint (家庭雙人)
   const [memberFilter, setMemberFilter] = useState<'all' | 'personal' | 'joint'>('all');
 
   // 判斷支出與收入
@@ -31,14 +31,14 @@ export default function AnalyticsWorkspace({
     return typeof val === 'number' ? val : parseFloat(val) || 0;
   };
 
-  // 嚴格互斥的過濾邏輯
+  // 完美對齊列表標籤的過濾邏輯：
   const filteredTransactions = transactions.filter((t) => {
     if (memberFilter === 'personal') {
-      // 個人專屬：不是共同支出 (is_joint 為 false/null/undefined)，且 owner_id 符合當前使用者（若無 owner_id 則預設歸屬自己或依欄位而定）
-      return !t.is_joint && (t.owner_id === currentUserId || !t.owner_id);
+      // 個人：不是雙人共同支出（對應保險、Netflix、部分午餐等個人/家人支出）
+      return !t.is_joint;
     }
     if (memberFilter === 'joint') {
-      // 家庭雙人：必須是共同支出 (is_joint 為 true)
+      // 家庭雙人：必須是雙人共同支出 (is_joint 為 true)
       return t.is_joint === true;
     }
     return true; // 全部
@@ -233,7 +233,7 @@ export default function AnalyticsWorkspace({
                       <div>
                         <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.accountName || '一般支出'}</p>
                         <p className="text-xs text-[#8C827A] mt-0.5">
-                          {t.transaction_date || t.date || t.created_at?.split('T')[0]} {t.is_joint ? '• 🏠 家庭' : '• 👤 個人'}
+                          {t.transaction_date || t.date || t.created_at?.split('T')[0]} {t.is_joint ? '• 🏠 雙人' : '• 👤 個人'}
                         </p>
                       </div>
                       <div className="text-right">
