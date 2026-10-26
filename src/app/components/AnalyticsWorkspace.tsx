@@ -40,7 +40,7 @@ export default function AnalyticsWorkspace({
   const categoryStats = filteredTransactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
-      // 如果是代付，強制給予專屬的獨立分類名稱，讓它在畫面上絕對顯眼
+      // 代付強制給予專屬分類名稱
       let cat = t.categoryName || t.category_name || t.category || '未分類';
       if (t.scope === 'paid_for_spouse') {
         cat = '💳 代墊款 (代付)';
@@ -90,11 +90,11 @@ export default function AnalyticsWorkspace({
 
       {/* 總覽數據卡片 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* 左側：極簡圓環 */}
+        {/* 左側：極簡圓環 (已將黑色改為柔和的焦糖奶茶色 #D2A782) */}
         <div className="rounded-[2rem] border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
           <div className="absolute top-5 left-6 text-xs font-bold text-[#8C827A] tracking-widest uppercase">支出佔比</div>
           <div className="my-8 relative flex items-center justify-center">
-            <div className="w-44 h-44 rounded-full border-[10px] border-[#F5F2EC] border-t-[#2C2623] border-r-[#2C2623] flex flex-col items-center justify-center bg-white transition-transform duration-700">
+            <div className="w-44 h-44 rounded-full border-[10px] border-[#F5F2EC] border-t-[#D2A782] border-r-[#D2A782] flex flex-col items-center justify-center bg-white transition-transform duration-700">
               <span className="text-[10px] text-[#8C827A] font-bold tracking-widest mb-1 uppercase">Total</span>
               <span className="text-2xl font-black text-[#2C2623] tracking-tight">
                 ${totalExpense.toLocaleString()}
@@ -165,10 +165,10 @@ export default function AnalyticsWorkspace({
                       {percentage}% <span className="text-[#8C827A] font-medium ml-2 text-xs">${amount.toLocaleString()}</span>
                     </div>
                   </div>
-                  {/* 極幼細緻進度條 */}
+                  {/* 極幼細緻進度條 (已將黑色改為柔和焦糖色 #D2A782) */}
                   <div className="h-1.5 w-full rounded-full bg-[#F5F2EC] overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-700 ease-out ${isPaidForSpouse ? 'bg-[#C15C54]' : 'bg-[#4A433E] group-hover:bg-[#2C2623]'}`}
+                      className={`h-full rounded-full transition-all duration-700 ease-out ${isPaidForSpouse ? 'bg-[#C15C54]' : 'bg-[#D2A782] group-hover:bg-[#C18C6A]'}`}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
