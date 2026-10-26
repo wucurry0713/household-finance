@@ -16,9 +16,15 @@ export default function AnalyticsWorkspace({
   selectedMonth = '',
   initialTransactions = [],
 }: AnalyticsWorkspaceProps) {
-  const [transactions] = useState<any[]>(initialTransactions);
+  // 🚀 關鍵修復：拔掉 useState！直接使用外部傳入的資料，這樣切換月份時畫面才會跟著更新！
+  const transactions = initialTransactions || [];
+
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [memberFilter, setMemberFilter] = useState<'all' | 'personal' | 'joint'>('all');
+  
+  // ✨ 新增：自訂日期區間狀態
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const getAmount = (t: any) => typeof t.amount === 'number' ? t.amount : parseFloat(t.amount) || 0;
 
@@ -27,9 +33,16 @@ export default function AnalyticsWorkspace({
   const isIncome = (t: any) => t.kind === 'income';
 
   const filteredTransactions = transactions.filter((t) => {
+    // 1. 日期區間篩選
+    const txDate = t.transaction_date || t.date || t.created_at?.split('T')[0];
+    if (startDate && txDate && txDate < startDate) return false;
+    if (endDate && txDate && txDate > endDate) return false;
+
+    // 2. 成員身份篩選
     const isJointTransaction = t.scope === 'shared' || t.scope === 'paid_for_spouse';
     if (memberFilter === 'personal') return t.scope === 'personal' || !isJointTransaction;
     if (memberFilter === 'joint') return isJointTransaction;
+    
     return true;
   });
 
@@ -62,35 +75,65 @@ export default function AnalyticsWorkspace({
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto text-[#2C2623] font-sans">
-      {/* 頂部控制列 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-3 sm:p-4 rounded-[2rem] border border-[#E5E0D8] shadow-sm">
-        <div>
-          <MonthSelector month={selectedMonth} />
+      {/* 頂部控制列包含區間篩選 */}
+      <div className="flex flex-col gap-4 bg-white p-4 sm:p-5 rounded-[2rem] border border-[#E5E0D8] shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <MonthSelector month={selectedMonth} />
+          </div>
+
+          <div className="flex items-center bg-[#FBF9F5] p-1 rounded-2xl border border-[#E5E0D8]">
+            {(['all', 'personal', 'joint'] as const).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setMemberFilter(filter)}
+                className={`flex-1 sm:flex-none px-5 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ease-out ${
+                  memberFilter === filter
+                    ? 'bg-[#2C2623] text-white shadow-md'
+                    : 'text-[#8C827A] hover:text-[#2C2623]'
+                }`}
+              >
+                {filter === 'all' && '全部'}
+                {filter === 'personal' && '👤 個人'}
+                {filter === 'joint' && '🏠 家庭雙人'}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex items-center bg-[#FBF9F5] p-1 rounded-2xl border border-[#E5E0D8]">
-          {(['all', 'personal', 'joint'] as const).map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              onClick={() => setMemberFilter(filter)}
-              className={`flex-1 sm:flex-none px-5 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ease-out ${
-                memberFilter === filter
-                  ? 'bg-[#2C2623] text-white shadow-md'
-                  : 'text-[#8C827A] hover:text-[#2C2623]'
-              }`}
-            >
-              {filter === 'all' && '全部'}
-              {filter === 'personal' && '👤 個人'}
-              {filter === 'joint' && '🏠 家庭雙人'}
-            </button>
-          ))}
+        {/* 自訂區間篩選 UI */}
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[#F5F2EC]">
+          <span className="text-[10px] font-bold text-[#8C827A] uppercase tracking-widest">自訂日期區間</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-[#E5E0D8] bg-[#FBF9F5] text-[#2C2623] focus:outline-none focus:border-[#D2A782] transition-colors cursor-pointer"
+            />
+            <span className="text-[#8C827A] text-xs font-medium">至</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-[#E5E0D8] bg-[#FBF9F5] text-[#2C2623] focus:outline-none focus:border-[#D2A782] transition-colors cursor-pointer"
+            />
+            {(startDate || endDate) && (
+              <button
+                onClick={() => { setStartDate(''); setEndDate(''); }}
+                className="ml-2 text-xs font-bold text-[#C15C54] hover:text-[#A04A43] transition-colors px-2 py-1 rounded-lg hover:bg-[#F5F2EC]"
+              >
+                清除
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* 總覽數據卡片 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* 左側：極簡圓環 (已將黑色改為柔和的焦糖奶茶色 #D2A782) */}
+        {/* 左側：焦糖奶茶色極簡圓環 */}
         <div className="rounded-[2rem] border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
           <div className="absolute top-5 left-6 text-xs font-bold text-[#8C827A] tracking-widest uppercase">支出佔比</div>
           <div className="my-8 relative flex items-center justify-center">
@@ -117,7 +160,7 @@ export default function AnalyticsWorkspace({
               </p>
             </div>
             <div className="mt-8 text-xs font-medium text-[#8C827A] bg-[#FBF9F5] border border-[#E5E0D8] inline-flex px-3 py-1.5 rounded-lg w-fit">
-              佔總流水 {totalIncome + totalExpense > 0 ? ((totalExpense / (totalIncome + totalExpense)) * 100).toFixed(1) : '100'}%
+              篩選筆數：{filteredTransactions.length} 筆
             </div>
           </div>
 
@@ -148,7 +191,6 @@ export default function AnalyticsWorkspace({
           <div className="space-y-6">
             {sortedCategories.map(([cat, amount]) => {
               const percentage = totalExpense > 0 ? ((amount / totalExpense) * 100).toFixed(1) : '0';
-              // 讓代付款有專屬的顏色標記
               const isPaidForSpouse = cat === '💳 代墊款 (代付)';
               
               return (
@@ -165,7 +207,7 @@ export default function AnalyticsWorkspace({
                       {percentage}% <span className="text-[#8C827A] font-medium ml-2 text-xs">${amount.toLocaleString()}</span>
                     </div>
                   </div>
-                  {/* 極幼細緻進度條 (已將黑色改為柔和焦糖色 #D2A782) */}
+                  {/* 極幼細緻進度條 (焦糖色) */}
                   <div className="h-1.5 w-full rounded-full bg-[#F5F2EC] overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-700 ease-out ${isPaidForSpouse ? 'bg-[#C15C54]' : 'bg-[#D2A782] group-hover:bg-[#C18C6A]'}`}
@@ -208,7 +250,7 @@ export default function AnalyticsWorkspace({
                   <div>
                     <p className="font-bold text-[#2C2623] text-sm">{t.note || t.description || '一般支出'}</p>
                     <p className="text-[11px] text-[#8C827A] mt-1 font-bold tracking-wide">
-                      {t.scope === 'shared' ? '🏠 雙人共用' : t.scope === 'paid_for_spouse' ? '💳 代付' : '👤 個人支出'}
+                      {t.transaction_date || t.date || t.created_at?.split('T')[0]} • {t.scope === 'shared' ? '🏠 雙人共用' : t.scope === 'paid_for_spouse' ? '💳 代付' : '👤 個人支出'}
                     </p>
                   </div>
                   <div className="text-right">
