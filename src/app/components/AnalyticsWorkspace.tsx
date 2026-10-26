@@ -18,39 +18,21 @@ export default function AnalyticsWorkspace({
 }: AnalyticsWorkspaceProps) {
   const [transactions] = useState<any[]>(initialTransactions);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  // 篩選狀態：all (全部), personal (個人), joint (家庭雙人)
   const [memberFilter, setMemberFilter] = useState<'all' | 'personal' | 'joint'>('all');
 
   const isExpense = (t: any) => t.kind === 'expense';
   const isIncome = (t: any) => t.kind === 'income';
+  const getAmount = (t: any) => typeof t.amount === 'number' ? t.amount : parseFloat(t.amount) || 0;
 
-  const getAmount = (t: any) => {
-    const val = t.amount;
-    return typeof val === 'number' ? val : parseFloat(val) || 0;
-  };
-
-  // 根據真實 scope 欄位進行嚴格互斥過濾
   const filteredTransactions = transactions.filter((t) => {
     const isJointTransaction = t.scope === 'shared' || t.scope === 'paid_for_spouse';
-
-    if (memberFilter === 'personal') {
-      return t.scope === 'personal' || !isJointTransaction;
-    }
-    if (memberFilter === 'joint') {
-      return isJointTransaction;
-    }
+    if (memberFilter === 'personal') return t.scope === 'personal' || !isJointTransaction;
+    if (memberFilter === 'joint') return isJointTransaction;
     return true;
   });
 
-  const totalExpense = filteredTransactions
-    .filter(isExpense)
-    .reduce((sum, t) => sum + getAmount(t), 0);
-
-  const totalIncome = filteredTransactions
-    .filter(isIncome)
-    .reduce((sum, t) => sum + getAmount(t), 0);
-
+  const totalExpense = filteredTransactions.filter(isExpense).reduce((sum, t) => sum + getAmount(t), 0);
+  const totalIncome = filteredTransactions.filter(isIncome).reduce((sum, t) => sum + getAmount(t), 0);
   const balance = totalIncome - totalExpense;
 
   const categoryStats = filteredTransactions
@@ -70,124 +52,110 @@ export default function AnalyticsWorkspace({
     : [];
 
   return (
-    <div className="space-y-6">
-      {/* 頂部列：月份選擇器與切換按鈕 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-3xl border border-[#E5E0D8] shadow-sm">
-        <MonthSelector month={selectedMonth} />
+    <div className="space-y-6 max-w-5xl mx-auto text-zinc-800">
+      {/* 頂部控制列 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white/80 backdrop-blur-xl p-3 sm:p-4 rounded-[2rem] border border-zinc-100 shadow-[0_2px_20px_rgb(0,0,0,0.02)]">
+        <div>
+          <MonthSelector month={selectedMonth} />
+        </div>
 
-        {/* 個人 / 家庭 / 全部篩選切換 */}
-        <div className="flex items-center bg-[#F5F2EC] p-1 rounded-2xl border border-[#E5E0D8]">
-          <button
-            type="button"
-            onClick={() => setMemberFilter('all')}
-            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-              memberFilter === 'all'
-                ? 'bg-[#2C2623] text-white shadow-sm'
-                : 'text-[#8C827A] hover:text-[#2C2623]'
-            }`}
-          >
-            全部
-          </button>
-          <button
-            type="button"
-            onClick={() => setMemberFilter('personal')}
-            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-              memberFilter === 'personal'
-                ? 'bg-[#2C2623] text-white shadow-sm'
-                : 'text-[#8C827A] hover:text-[#2C2623]'
-            }`}
-          >
-            👤 個人
-          </button>
-          <button
-            type="button"
-            onClick={() => setMemberFilter('joint')}
-            className={`flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-xl transition-all ${
-              memberFilter === 'joint'
-                ? 'bg-[#2C2623] text-white shadow-sm'
-                : 'text-[#8C827A] hover:text-[#2C2623]'
-            }`}
-          >
-            🏠 家庭雙人
-          </button>
+        <div className="flex items-center bg-zinc-100/80 p-1 rounded-2xl">
+          {(['all', 'personal', 'joint'] as const).map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setMemberFilter(filter)}
+              className={`flex-1 sm:flex-none px-5 py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 ease-out ${
+                memberFilter === filter
+                  ? 'bg-white text-zinc-900 shadow-[0_2px_10px_rgb(0,0,0,0.06)]'
+                  : 'text-zinc-400 hover:text-zinc-600'
+              }`}
+            >
+              {filter === 'all' && '全部'}
+              {filter === 'personal' && '👤 個人'}
+              {filter === 'joint' && '🏠 家庭雙人'}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* 頂部總覽區 */}
+      {/* 總覽數據卡片 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
-          <div className="absolute top-4 left-6 text-sm font-semibold text-[#8C827A]">總支出佔比概覽</div>
-          <div className="my-6 relative flex items-center justify-center">
-            <div className="w-40 h-40 rounded-full border-[18px] border-[#F5F2EC] border-t-[#C88A32] border-r-[#2C2623] flex flex-col items-center justify-center shadow-inner bg-white">
-              <span className="text-xs text-[#8C827A] font-medium tracking-wide">總支出</span>
-              <span className="text-2xl font-black text-[#2C2623] mt-0.5">
+        {/* 左側：極簡圓環 */}
+        <div className="rounded-[2rem] border border-zinc-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col items-center justify-center relative overflow-hidden group">
+          <div className="absolute top-5 left-6 text-xs font-semibold text-zinc-400 tracking-wider">支出佔比</div>
+          <div className="my-8 relative flex items-center justify-center">
+            <div className="w-44 h-44 rounded-full border-[12px] border-zinc-50 border-t-zinc-800 border-r-zinc-800 flex flex-col items-center justify-center shadow-inner bg-white transition-transform duration-700 group-hover:scale-105">
+              <span className="text-[10px] text-zinc-400 font-medium tracking-widest mb-1">TOTAL</span>
+              <span className="text-2xl font-black text-zinc-800 tracking-tight">
                 ${totalExpense.toLocaleString()}
               </span>
             </div>
           </div>
-          <div className="flex justify-between w-full px-4 text-xs text-[#8C827A] border-t border-[#F5F2EC] pt-4">
-            <span>總收入: <strong className="text-[#2E7D32] font-semibold">${totalIncome.toLocaleString()}</strong></span>
-            <span>結餘: <strong className="text-[#2C2623] font-semibold">${balance.toLocaleString()}</strong></span>
+          <div className="flex justify-between w-full px-2 text-xs text-zinc-500 border-t border-zinc-50 pt-5">
+            <span className="flex items-center gap-1">收入 <strong className="text-emerald-500 font-semibold">${totalIncome.toLocaleString()}</strong></span>
+            <span className="flex items-center gap-1">結餘 <strong className="text-zinc-800 font-semibold">${balance.toLocaleString()}</strong></span>
           </div>
         </div>
 
-        <div className="lg:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col justify-between">
+        {/* 右側：金額大卡 */}
+        <div className="lg:col-span-2 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="rounded-[2rem] border border-zinc-100 bg-white p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-300">
             <div>
-              <p className="text-sm font-medium text-[#8C827A]">本期總支出</p>
-              <p className="mt-3 text-3xl font-extrabold text-[#E54D42]">
+              <p className="text-xs font-semibold text-zinc-400 tracking-wider">本期總支出</p>
+              <p className="mt-4 text-4xl font-extrabold text-rose-500 tracking-tight">
                 ${totalExpense.toLocaleString()}
               </p>
             </div>
-            <div className="mt-4 text-xs text-[#8C827A]">
-              佔總流水比例：{totalIncome + totalExpense > 0 ? ((totalExpense / (totalIncome + totalExpense)) * 100).toFixed(1) : '100'}%
+            <div className="mt-8 text-xs text-zinc-400 bg-zinc-50 inline-flex px-3 py-1.5 rounded-lg w-fit">
+              佔總流水 {totalIncome + totalExpense > 0 ? ((totalExpense / (totalIncome + totalExpense)) * 100).toFixed(1) : '100'}%
             </div>
           </div>
 
-          <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col justify-between">
+          <div className="rounded-[2rem] border border-zinc-100 bg-white p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-300">
             <div>
-              <p className="text-sm font-medium text-[#8C827A]">本期總收入</p>
-              <p className="mt-3 text-3xl font-extrabold text-[#2E7D32]">
+              <p className="text-xs font-semibold text-zinc-400 tracking-wider">本期總收入</p>
+              <p className="mt-4 text-4xl font-extrabold text-emerald-500 tracking-tight">
                 ${totalIncome.toLocaleString()}
               </p>
             </div>
-            <div className="mt-4 text-xs text-[#8C827A]">
-              淨收支：<span className={balance >= 0 ? "text-[#2E7D32] font-bold" : "text-[#E54D42] font-bold"}>
-                ${balance.toLocaleString()}
-              </span>
+            <div className="mt-8 text-xs text-zinc-400 bg-zinc-50 inline-flex px-3 py-1.5 rounded-lg w-fit">
+              淨結餘 <span className={`ml-1 font-semibold ${balance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>${balance.toLocaleString()}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* 分類統計清單 */}
-      <div className="rounded-3xl border border-[#E5E0D8] bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-[#2C2623]">支出分類統計與佔比</h3>
-          <span className="text-xs text-[#C88A32] font-semibold bg-[#F5F2EC] px-3 py-1.5 rounded-full">💡 點擊下方任意分類可彈出明細視窗</span>
+      <div className="rounded-[2rem] border border-zinc-100 bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-lg font-bold text-zinc-800">分類統計</h3>
+          <span className="text-[10px] text-zinc-500 font-medium tracking-wider bg-zinc-50 px-3 py-1.5 rounded-xl border border-zinc-100">
+            點擊查看明細
+          </span>
         </div>
 
         {sortedCategories.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {sortedCategories.map(([cat, amount]) => {
               const percentage = totalExpense > 0 ? ((amount / totalExpense) * 100).toFixed(1) : '0';
               return (
                 <div
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className="group p-4 rounded-2xl transition-all hover:bg-[#FBF9F5] cursor-pointer border border-[#E5E0D8]/60 hover:border-[#C88A32] shadow-sm"
+                  className="group cursor-pointer"
                 >
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-bold text-[#2C2623] group-hover:text-[#C88A32] transition-colors flex items-center gap-2">
-                      📂 {cat}
+                  <div className="flex justify-between text-sm mb-2.5">
+                    <span className="font-semibold text-zinc-600 group-hover:text-zinc-900 transition-colors">
+                      {cat}
                     </span>
-                    <span className="text-[#2C2623] font-bold">
-                      {percentage}% <span className="text-[#8C827A] font-normal ml-1">(${amount.toLocaleString()})</span>
-                    </span>
+                    <div className="text-zinc-800 font-semibold tracking-wide">
+                      {percentage}% <span className="text-zinc-400 font-normal ml-2 text-xs">${amount.toLocaleString()}</span>
+                    </div>
                   </div>
-                  <div className="h-3.5 w-full rounded-full bg-[#F5F2EC] overflow-hidden p-0.5">
+                  <div className="h-2.5 w-full rounded-full bg-zinc-100 overflow-hidden">
                     <div
-                      className="h-full bg-[#2C2623] group-hover:bg-[#C88A32] rounded-full transition-all duration-500"
+                      className="h-full bg-zinc-800 rounded-full transition-all duration-700 ease-out group-hover:bg-zinc-600"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
@@ -196,47 +164,55 @@ export default function AnalyticsWorkspace({
             })}
           </div>
         ) : (
-          <div className="text-[#8C827A] py-12 text-center font-medium">該篩選條件下尚無支出資料</div>
+          <div className="text-zinc-400 py-16 text-center text-sm font-medium">該條件下尚無支出資料</div>
         )}
       </div>
 
       {/* 彈出交易明細 Modal */}
       {selectedCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#E5E0D8] overflow-hidden">
-            <div className="p-6 border-b border-[#E5E0D8] flex items-center justify-between bg-[#FBF9F5]">
-              <h3 className="text-lg font-bold text-[#2C2623]">📁 {selectedCategory} - 交易明細</h3>
+        <div 
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-zinc-900/20 backdrop-blur-sm p-4 sm:p-6 transition-opacity"
+          onClick={() => setSelectedCategory(null)}
+        >
+          <div 
+            className="bg-white rounded-[2rem] max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 ease-out"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-white/50 backdrop-blur-md">
+              <h3 className="text-lg font-bold text-zinc-800">{selectedCategory}</h3>
               <button
                 type="button"
                 onClick={() => setSelectedCategory(null)}
-                className="w-9 h-9 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center text-[#8C827A] hover:text-[#2C2623]"
+                className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200 transition-colors"
               >
                 ✕
               </button>
             </div>
-            <div className="p-6 overflow-y-auto space-y-3 flex-1">
+            
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-3 bg-zinc-50/50">
               {categoryTransactions.map((t, idx) => (
-                <div key={t.id || idx} className="p-4 rounded-2xl bg-[#FBF9F5] border border-[#E5E0D8] flex items-center justify-between">
+                <div key={t.id || idx} className="p-4 rounded-2xl bg-white border border-zinc-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
                   <div>
-                    <p className="font-semibold text-[#2C2623] text-sm">{t.note || t.description || '一般支出'}</p>
-                    <p className="text-xs text-[#8C827A] mt-0.5">
-                      {t.scope === 'shared' || t.scope === 'paid_for_spouse' ? '• 🏠 雙人' : '• 👤 個人'}
+                    <p className="font-semibold text-zinc-800 text-sm">{t.note || t.description || '一般支出'}</p>
+                    <p className="text-[11px] text-zinc-400 mt-1 font-medium tracking-wide">
+                      {t.scope === 'shared' || t.scope === 'paid_for_spouse' ? '🏠 雙人共用' : '👤 個人支出'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-[#E54D42]">${getAmount(t).toLocaleString()}</p>
+                    <p className="font-bold text-rose-500 tracking-tight">${getAmount(t).toLocaleString()}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="p-4 border-t border-[#E5E0D8] bg-[#FBF9F5] flex justify-between items-center text-sm">
-              <span className="text-[#8C827A]">
-                分類總計：<strong className="text-[#2C2623]">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong>
+            
+            <div className="p-5 sm:p-6 border-t border-zinc-100 bg-white flex justify-between items-center">
+              <span className="text-xs text-zinc-500 font-medium">
+                總計 <strong className="text-zinc-900 text-lg ml-2 tracking-tight">${(categoryStats[selectedCategory] || 0).toLocaleString()}</strong>
               </span>
               <button
                 type="button"
                 onClick={() => setSelectedCategory(null)}
-                className="px-5 py-2 bg-[#2C2623] text-white rounded-xl font-medium hover:bg-black transition-all"
+                className="px-6 py-2.5 bg-zinc-900 text-white text-sm rounded-xl font-medium hover:bg-zinc-800 transition-colors shadow-md"
               >
                 關閉
               </button>
