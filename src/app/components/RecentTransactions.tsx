@@ -1,328 +1,130 @@
-"use client";
+'use client';
 
-import { useActionState, useRef, useState, useTransition } from "react";
-import {
-  ArrowDownLeft,
-  ArrowLeftRight,
-  ArrowUpRight,
-  ChevronDown,
-  Download,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { useState } from 'react';
 
-import {
-  deleteTransactionAction,
-  exportTransactionsAction,
-  type TransactionActionState,
-} from "@/app/actions/transactions";
-import type { DashboardAccount, DashboardTransaction } from "@/lib/finance/dashboard";
-import type { Database } from "@/types/database";
-import { QuickTransactionModal } from "@/app/components/QuickTransactionModal";
-import { ExcelExportButton } from "@/app/components/ExcelExportButton";
-import { DeleteConfirmationDialog } from "@/app/components/DeleteConfirmationDialog";
+export  function RecentTransactions({ transactions = [], onEdit, onDelete }: any) {
+  // 控制每天是否展開的狀態 (預設全關閉，若要預設展開今天可設為 { [today]: true })
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
 
-type Category = Database["public"]["Tables"]["categories"]["Row"];
-type ExportScope = "current_month" | "month" | "all";
+  const toggleDate = (date: string) => {
+    setExpandedDates((prev) => ({ ...prev, [date]: !prev[date] }));
+  };
 
-const initialState: TransactionActionState = {
-  error: null,
-  success: false,
-  intent: null,
-};
+  // 1. 將所有交易按「日期」進行分組與加總
+  const groupedTransactions = transactions.reduce((acc: Record<string, any>, t: any) => {
+    const date = t.transaction_date || t.date || t.created_at?.split('T')[0] || '未知日期';
+    if (!acc[date]) {
+      acc[date] = { date, items: [], dailyTotal: 0 };
+    }
+    
+    acc[date].items.push(t);
+    
+    const amt = typeof t.amount === 'number' ? t.amount : parseFloat(t.amount) || 0;
+    // 支出與代付扣除總額，收入增加總額
+    if (t.kind === 'expense' || t.scope === 'paid_for_spouse') {
+      acc[date].dailyTotal -= amt;
+    } else {
+      acc[date].dailyTotal += amt;
+    }
+    
+    return acc;
+  }, {});
 
-function formatMoney(amount: number, currency: string) {
-  try {
-    return new Intl.NumberFormat("zh-TW", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${currency} ${Math.round(amount).toLocaleString("zh-TW")}`;
-  }
-}
+  // 2. 確保日期由新到舊排序
+  const sortedDates = Object.keys(groupedTransactions).sort((a, b) => b.localeCompare(a));
 
-function DeleteTransactionForm({
-  transactionId,
-  description,
-}: {
-  transactionId: string;
-  description: string;
-}) {
-  const [state, formAction, isPending] = useActionState(deleteTransactionAction, initialState);
-  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const getScopeLabel = (scope: string) => {
+    if (scope === 'shared') return '雙人';
+    if (scope === 'paid_for_spouse') return '代付';
+    return '個人';
+  };
 
   return (
-    <form action={formAction} ref={formRef}>
-      <input name="transaction_id" type="hidden" value={transactionId} />
-      <button
-        aria-label="刪除交易"
-        className="grid size-9 place-items-center rounded-md text-[#8C827A] transition hover:bg-[#fff0ed] hover:text-[#a14131] disabled:opacity-50"
-        disabled={isPending}
-        onClick={() => setIsConfirmationOpen(true)}
-        title="刪除交易"
-        type="button"
-      >
-        <Trash2 size={16} />
-      </button>
-      <DeleteConfirmationDialog
-        description={`確定要刪除「${description}」嗎？此操作將無法復原。`}
-        error={state.error}
-        onCancel={() => setIsConfirmationOpen(false)}
-        onConfirm={() => formRef.current?.requestSubmit()}
-        open={isConfirmationOpen && !state.success}
-        pending={isPending}
-        title="確認要刪除此交易紀錄嗎？"
-      />
-      {state.error && (
-        <p aria-live="polite" className="absolute right-4 z-10 mt-1 max-w-64 rounded bg-[#fff0ed] p-2 text-xs text-[#9f3e2e]" role="alert">
-          {state.error}
-        </p>
-      )}
-    </form>
-  );
-}
-
-export function RecentTransactions({
-  accounts,
-  categories,
-  transactions,
-  viewOwnerId,
-  monthLabel,
-  monthlyExpenseTotal,
-  currency,
-  selectedMonth,
-}: {
-  accounts: DashboardAccount[];
-  categories: Category[];
-  transactions: DashboardTransaction[];
-  viewOwnerId?: string | null;
-  monthLabel: string;
-  monthlyExpenseTotal: number;
-  currency: string;
-  selectedMonth: string;
-}) {
-  const [isExpenseExpanded, setIsExpenseExpanded] = useState(true);
-  const [editingTransaction, setEditingTransaction] = useState<DashboardTransaction | null>(null);
-  const [exportScope, setExportScope] = useState<ExportScope>("current_month");
-  const [exportMonth, setExportMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
-  const [exportError, setExportError] = useState<string | null>(null);
-  const [isExporting, startExport] = useTransition();
-
-  function downloadCsv() {
-    setExportError(null);
-    startExport(async () => {
-      const result = await exportTransactionsAction(exportScope, exportMonth, viewOwnerId ?? null);
-      if (result.error || !result.rows) {
-        setExportError(result.error ?? "匯出失敗，請稍後再試。");
-        return;
-      }
-
-      const headers = ["日期", "類型", "金額", "幣別", "類別", "扣款／來源帳戶", "記帳者", "備註"];
-      const protectFormula = (value: string) => /^[\t\r ]*[=+\-@]/.test(value) ? `'${value}` : value;
-      const quote = (value: string | number) =>
-        `"${String(value).replaceAll('"', '""')}"`;
-      const lines = [
-        headers,
-        ...result.rows.map((row) => [
-          row.date,
-          row.kind,
-          row.amount,
-          row.currency,
-          protectFormula(row.category),
-          protectFormula(row.account),
-          protectFormula(row.owner),
-          protectFormula(row.notes),
-        ]),
-      ];
-      const csv = `\uFEFF${lines.map((line) => line.map(quote).join(",")).join("\r\n")}`;
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      const suffix =
-        exportScope === "all"
-          ? "全部"
-          : exportScope === "month"
-            ? exportMonth
-            : "本月";
-      anchor.href = url;
-      anchor.download = `家庭交易報表-${suffix}.csv`;
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    });
-  }
-
-  return (
-    <section className="border-y border-[#EFECE6] bg-white px-5 py-6 sm:px-7">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-[#8C827A]">家庭帳本</p>
-          <h2 className="mt-1 font-semibold">{monthLabel}交易明細</h2>
-          <p className="mt-2 text-sm text-[#8C827A]">
-            {monthLabel}總支出{" "}
-            <span className="font-mono font-semibold tabular-nums text-[#2C2623]">
-              {formatMoney(monthlyExpenseTotal, currency)}
-            </span>
-          </p>
+    <div className="bg-white rounded-[2rem] border border-[#E5E0D8] shadow-sm p-6 sm:p-8">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-lg font-extrabold text-[#2C2623]">交月交易明細</h2>
+          <p className="text-xs text-[#8C827A] mt-1">按日期分組</p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {isExpenseExpanded && (
-            <>
-              <select
-                aria-label="CSV 匯出範圍"
-                className="h-9 rounded-lg border border-[#EFECE6] bg-white px-2.5 text-xs text-[#8C827A] outline-none focus:border-[#B8976C]"
-                onChange={(event) => setExportScope(event.target.value as ExportScope)}
-                value={exportScope}
-              >
-                <option value="current_month">本月交易</option>
-                <option value="month">指定月份</option>
-                <option value="all">全部交易</option>
-              </select>
-              {exportScope === "month" && (
-                <input
-                  aria-label="選擇匯出月份"
-                  className="h-9 rounded-lg border border-[#EFECE6] bg-white px-2 text-xs text-[#8C827A] outline-none focus:border-[#B8976C]"
-                  onChange={(event) => setExportMonth(event.target.value)}
-                  type="month"
-                  value={exportMonth}
-                />
-              )}
-              <button
-                className="flex h-9 items-center gap-1.5 rounded-lg border border-[#EFECE6] px-3 text-xs font-semibold text-[#6B573F] transition hover:bg-[#E8DEC9] disabled:cursor-wait disabled:opacity-60"
-                disabled={isExporting}
-                onClick={downloadCsv}
-                type="button"
-              >
-                <Download size={15} />
-                {isExporting ? "準備中…" : "匯出 CSV"}
-              </button>
-              <ExcelExportButton month={selectedMonth} ownerId={viewOwnerId} />
-            </>
-          )}
-          <button
-            aria-controls="household-expense-details"
-            aria-expanded={isExpenseExpanded}
-            aria-label={isExpenseExpanded ? "收起家庭支出明細" : "展開家庭支出明細"}
-            className="grid size-9 shrink-0 place-items-center rounded-lg border border-[#EFECE6] text-[#6B573F] transition-colors hover:bg-[#E8DEC9]"
-            onClick={() => setIsExpenseExpanded((expanded) => !expanded)}
-            type="button"
-          >
-            <ChevronDown
-              aria-hidden="true"
-              className={`transition-transform duration-300 ${isExpenseExpanded ? "rotate-180" : ""}`}
-              size={18}
-            />
-          </button>
+        <div className="flex gap-2">
+          <button className="px-4 py-2 border border-[#E5E0D8] bg-[#FBF9F5] rounded-xl text-xs font-bold text-[#2C2623]">匯出 CSV</button>
+          <button className="px-4 py-2 bg-[#D2A782] text-white rounded-xl text-xs font-bold shadow-sm">完整 Excel</button>
         </div>
       </div>
 
-      <div
-        aria-hidden={!isExpenseExpanded}
-        className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
-          isExpenseExpanded ? "mt-4 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"
-        }`}
-        id="household-expense-details"
-        inert={!isExpenseExpanded}
-      >
-        <div className="min-h-0 overflow-hidden">
-          {exportError && (
-            <p aria-live="polite" className="mb-3 text-sm text-[#9f3e2e]" role="alert">
-              {exportError}
-            </p>
-          )}
+      <div className="space-y-4">
+        {sortedDates.map((date) => {
+          const group = groupedTransactions[date];
+          const isExpanded = expandedDates[date];
+          const isPositive = group.dailyTotal >= 0;
 
-          {transactions.length ? (
-            <div className="divide-y divide-[#E8DEC9]">
-              {transactions.map((transaction) => {
-                const isIncome = transaction.kind === "income";
-                const isTransfer = transaction.kind === "transfer";
-                const Icon = isTransfer ? ArrowLeftRight : isIncome ? ArrowDownLeft : ArrowUpRight;
-                const detail = isTransfer
-                  ? `${transaction.accountName ?? "帳戶"} → ${transaction.destinationName ?? "帳戶"}`
-                  : [transaction.categoryName, transaction.accountName]
-                      .filter(Boolean)
-                      .join(" · ") || "未分類";
+          return (
+            <div key={date} className="border border-[#E5E0D8] rounded-2xl bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              
+              {/* 📅 日期標題列 (點擊展開/折疊) */}
+              <div 
+                onClick={() => toggleDate(date)}
+                className="flex justify-between items-center p-4 bg-[#FBF9F5] cursor-pointer hover:bg-[#F5F2EC] transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-extrabold text-[#2C2623]">{date}</span>
+                  <span className="text-[10px] font-bold text-[#8C827A] bg-white border border-[#E5E0D8] px-2 py-0.5 rounded-lg">
+                    {group.items.length} 筆
+                  </span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={`font-extrabold tracking-tight ${isPositive ? 'text-[#5E8B7E]' : 'text-[#C15C54]'}`}>
+                    {isPositive ? '+' : '-'}${Math.abs(group.dailyTotal).toLocaleString()}
+                  </span>
+                  <span className="text-[#8C827A] font-bold text-xs w-4 flex justify-center">
+                    {isExpanded ? '▲' : '▼'}
+                  </span>
+                </div>
+              </div>
 
-                return (
-                  <article className="flex min-w-0 items-center gap-3 py-3.5" key={transaction.id}>
-                    <span
-                      className={`grid size-10 shrink-0 place-items-center rounded-full ${
-                        isIncome
-                          ? "bg-[#E8DEC9] text-[#6B573F]"
-                          : isTransfer
-                            ? "bg-[#E8DEC9] text-[#8C827A]"
-                            : "bg-[#fff1e9] text-[#ab6942]"
-                      }`}
-                    >
-                      <Icon size={18} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {transaction.notes || transaction.description || (isTransfer ? "帳戶轉帳" : detail)}
-                        {transaction.kind === "expense" &&
-                          (transaction.scope === "shared" || transaction.scope === "paid_for_spouse") && (
-                          <span className="ml-2 inline-flex rounded-full bg-[#E8DEC9] px-2 py-0.5 align-middle text-[10px] font-medium text-[#6B573F]">
-                            {transaction.scope === "paid_for_spouse" ? "我代付" : "雙人"}
+              {/* 🧾 當天明細列表 (展開時顯示) */}
+              {isExpanded && (
+                <div className="divide-y divide-[#E5E0D8] bg-white animate-in slide-in-from-top-2 duration-200">
+                  {group.items.map((t: any, i: number) => {
+                    const amt = parseFloat(t.amount) || 0;
+                    const isExp = t.kind === 'expense' || t.scope === 'paid_for_spouse';
+                    
+                    return (
+                      <div key={t.id || i} className="p-4 flex justify-between items-center hover:bg-[#FBF9F5] transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-[#F5F2EC] flex items-center justify-center text-[#D2A782] font-bold text-lg">
+                            {isExp ? '↗' : '↙'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-[#2C2623]">{t.note || t.description || '一般交易'}</span>
+                              <span className="text-[10px] font-bold text-[#8C827A] bg-[#E5E0D8]/40 px-1.5 py-0.5 rounded-md">
+                                {getScopeLabel(t.scope)}
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#8C827A] mt-1">{t.accountName || t.account_name || '預設帳戶'}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <span className={`font-bold tracking-tight ${isExp ? 'text-[#C15C54]' : 'text-[#5E8B7E]'}`}>
+                            {isExp ? '-' : '+'}${amt.toLocaleString()}
                           </span>
-                        )}
-                      </p>
-                      <p className="mt-1 truncate text-xs text-[#8C827A]">
-                        {new Date(`${transaction.transaction_date}T00:00:00`).toLocaleDateString("zh-TW", {
-                          month: "numeric",
-                          day: "numeric",
-                        })}
-                        {" · "}
-                        {detail}
-                      </p>
-                    </div>
-                    <p
-                      className={`whitespace-nowrap text-sm font-semibold ${
-                        isIncome ? "text-[#6B573F]" : isTransfer ? "text-[#8C827A]" : "text-[#2C2623]"
-                      }`}
-                    >
-                      {isIncome ? "+" : isTransfer ? "" : "−"}
-                      {formatMoney(transaction.amount, transaction.currency)}
-                    </p>
-                    <button
-                      aria-label="編輯交易"
-                      className="grid size-9 shrink-0 place-items-center rounded-md text-[#8C827A] transition hover:bg-[#E8DEC9] hover:text-[#6B573F]"
-                      onClick={() => setEditingTransaction(transaction)}
-                      title="編輯交易"
-                      type="button"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <DeleteTransactionForm
-                      description={`${transaction.transaction_date} · ${detail} · ${formatMoney(transaction.amount, transaction.currency)}`}
-                      transactionId={transaction.id}
-                    />
-                  </article>
-                );
-              })}
+                          <div className="flex gap-2">
+                            <button onClick={() => onEdit?.(t)} className="text-[#8C827A] hover:text-[#2C2623] p-1">✎</button>
+                            <button onClick={() => onDelete?.(t)} className="text-[#8C827A] hover:text-[#C15C54] p-1">✕</button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
             </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-[#EFECE6] px-5 py-10 text-center text-sm text-[#8C827A]">
-              尚無交易紀錄，使用「記一筆」開始記帳。
-            </div>
-          )}
-        </div>
+          );
+        })}
       </div>
-
-      {editingTransaction && (
-        <QuickTransactionModal
-          accounts={accounts}
-          categories={categories}
-          initialTransaction={editingTransaction}
-          onClose={() => setEditingTransaction(null)}
-        />
-      )}
-    </section>
+    </div>
   );
 }
