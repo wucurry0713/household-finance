@@ -43,7 +43,7 @@ export  function RecentTransactions({ transactions = [], onEdit, onDelete }: any
     <div className="bg-white rounded-[2rem] border border-[#E5E0D8] shadow-sm p-6 sm:p-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-lg font-extrabold text-[#2C2623]">交月交易明細</h2>
+          <h2 className="text-lg font-extrabold text-[#2C2623]">交易明細</h2>
           <p className="text-xs text-[#8C827A] mt-1">按日期分組</p>
         </div>
         <div className="flex gap-2">
