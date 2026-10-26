@@ -16,29 +16,24 @@ export default function AnalyticsWorkspace({
   selectedMonth = '',
   initialTransactions = [],
 }: AnalyticsWorkspaceProps) {
-  // 🚀 關鍵修復：拔掉 useState！直接使用外部傳入的資料，這樣切換月份時畫面才會跟著更新！
   const transactions = initialTransactions || [];
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [memberFilter, setMemberFilter] = useState<'all' | 'personal' | 'joint'>('all');
   
-  // ✨ 新增：自訂日期區間狀態
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
   const getAmount = (t: any) => typeof t.amount === 'number' ? t.amount : parseFloat(t.amount) || 0;
 
-  // 強制將代付也視為支出，避免在圖表中隱形
   const isExpense = (t: any) => t.kind === 'expense' || t.scope === 'paid_for_spouse';
   const isIncome = (t: any) => t.kind === 'income';
 
   const filteredTransactions = transactions.filter((t) => {
-    // 1. 日期區間篩選
     const txDate = t.transaction_date || t.date || t.created_at?.split('T')[0];
     if (startDate && txDate && txDate < startDate) return false;
     if (endDate && txDate && txDate > endDate) return false;
 
-    // 2. 成員身份篩選
     const isJointTransaction = t.scope === 'shared' || t.scope === 'paid_for_spouse';
     if (memberFilter === 'personal') return t.scope === 'personal' || !isJointTransaction;
     if (memberFilter === 'joint') return isJointTransaction;
@@ -50,10 +45,15 @@ export default function AnalyticsWorkspace({
   const totalIncome = filteredTransactions.filter(isIncome).reduce((sum, t) => sum + getAmount(t), 0);
   const balance = totalIncome - totalExpense;
 
+  // 計算儲蓄率 (結餘 / 收入)
+  const savingsRate = totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(1) : '0';
+
+  // 計算平均每日支出 (預設以當月天數或 30 天計)
+  const dailyAverage = Math.round(totalExpense / 30);
+
   const categoryStats = filteredTransactions
     .filter(isExpense)
     .reduce((acc: Record<string, number>, t) => {
-      // 代付強制給予專屬分類名稱
       let cat = t.categoryName || t.category_name || t.category || '未分類';
       if (t.scope === 'paid_for_spouse') {
         cat = '💳 代墊款 (代付)';
@@ -131,26 +131,34 @@ export default function AnalyticsWorkspace({
         </div>
       </div>
 
-      {/* 總覽數據卡片 */}
+      {/* 總覽數據卡片：左側改為「財務健康指標」，右側維持總支出與總收入 */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* 左側：焦糖奶茶色極簡圓環 */}
-        <div className="rounded-[2rem] border border-[#E5E0D8] bg-white p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
-          <div className="absolute top-5 left-6 text-xs font-bold text-[#8C827A] tracking-widest uppercase">支出佔比</div>
-          <div className="my-8 relative flex items-center justify-center">
-            <div className="w-44 h-44 rounded-full border-[10px] border-[#F5F2EC] border-t-[#D2A782] border-r-[#D2A782] flex flex-col items-center justify-center bg-white transition-transform duration-700">
-              <span className="text-[10px] text-[#8C827A] font-bold tracking-widest mb-1 uppercase">Total</span>
-              <span className="text-2xl font-black text-[#2C2623] tracking-tight">
-                ${totalExpense.toLocaleString()}
-              </span>
+        
+        {/* 左側：取代原本的圓餅圖，改為實用的「財務健康指標」 */}
+        <div className="rounded-[2rem] border border-[#E5E0D8] bg-white p-7 shadow-sm flex flex-col justify-between">
+          <div>
+            <p className="text-xs font-bold text-[#8C827A] tracking-widest uppercase">財務健康指標</p>
+            <div className="mt-5 space-y-4">
+              <div>
+                <p className="text-xs text-[#8C827A] font-medium">本期儲蓄率</p>
+                <p className={`text-2xl font-black mt-1 ${parseFloat(savingsRate) >= 0 ? 'text-[#5E8B7E]' : 'text-[#C15C54]'}`}>
+                  {savingsRate}%
+                </p>
+              </div>
+              <div className="pt-3 border-t border-[#F5F2EC]">
+                <p className="text-xs text-[#8C827A] font-medium">平均每日支出</p>
+                <p className="text-2xl font-black text-[#2C2623] mt-1">
+                  ${dailyAverage.toLocaleString()} <span className="text-xs font-normal text-[#8C827A]">/天</span>
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex justify-between w-full px-2 text-xs text-[#8C827A] border-t border-[#F5F2EC] pt-5 font-medium">
-            <span className="flex items-center gap-1.5">收入 <strong className="text-[#5E8B7E] font-bold">${totalIncome.toLocaleString()}</strong></span>
-            <span className="flex items-center gap-1.5">結餘 <strong className="text-[#2C2623] font-bold">${balance.toLocaleString()}</strong></span>
+          <div className="mt-6 pt-4 border-t border-[#F5F2EC] flex justify-between text-xs text-[#8C827A]">
+            <span>篩選筆數：<strong className="text-[#2C2623]">{filteredTransactions.length} 筆</strong></span>
           </div>
         </div>
 
-        {/* 右側：金額大卡 */}
+        {/* 右側兩張金額大卡 */}
         <div className="lg:col-span-2 grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="rounded-[2rem] border border-[#E5E0D8] bg-white p-7 shadow-sm flex flex-col justify-between hover:border-[#D1CCC5] transition-colors duration-300">
             <div>
@@ -160,7 +168,7 @@ export default function AnalyticsWorkspace({
               </p>
             </div>
             <div className="mt-8 text-xs font-medium text-[#8C827A] bg-[#FBF9F5] border border-[#E5E0D8] inline-flex px-3 py-1.5 rounded-lg w-fit">
-              篩選筆數：{filteredTransactions.length} 筆
+              佔總流水量
             </div>
           </div>
 
